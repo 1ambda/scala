@@ -17,8 +17,8 @@ $ sbt
 $ sbt compile run
 ```
 
-build.sbt` : **Scala** version, application info
-project/build.properties` : specify **SBT** version
+`build.sbt` : **Scala** version, application info
+`project/build.properties` : specify **SBT** version
 
 Also, you can use `build.scala` instead of `build.sbt`which are suitable for most cases. The .scala files are typically used for sharing code across .sbt files and for more complex build definitions.
 
@@ -105,6 +105,5 @@ object ApplicationBuild extends Build {
       resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
             
     )
-
 }
 ```
