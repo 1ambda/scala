@@ -1,0 +1,23 @@
+(
+ :root "/home/anster/github/learn-scala/."
+ :cacheDir "/home/anster/github/learn-scala/.ensime_cache"
+ :name "learn-scala"
+ :java-home "/usr/lib/jvm/java-8-oracle"
+ :java-flags ("-Xms1024m" "-Xmx1024m" "-XX:ReservedCodeCacheSize=128m")
+ :reference-source-roots ("/usr/lib/jvm/java-8-oracle/src.zip")
+ :scala-version "2.11.2"
+ :compiler-args nil
+ 
+ :subprojects ((
+   :name "learn-scala"
+   :module-name "learn-scala"
+   :source-roots ("/home/anster/github/learn-scala/src/main/scala" "/home/anster/github/learn-scala/src/main/java" "/home/anster/github/learn-scala/src/test/scala" "/home/anster/github/learn-scala/src/test/java")
+   :target "/home/anster/github/learn-scala/target/scala-2.11/classes"
+   :test-target "/home/anster/github/learn-scala/target/scala-2.11/test-classes"
+   :depends-on-modules nil
+   :compile-deps ("/home/anster/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.2.jar")
+   :runtime-deps nil
+   :test-deps ("/home/anster/.ivy2/cache/org.scalatest/scalatest_2.11/bundles/scalatest_2.11-2.2.1.jar" "/home/anster/.ivy2/cache/org.scala-lang/scala-reflect/jars/scala-reflect-2.11.2.jar" "/home/anster/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/bundles/scala-xml_2.11-1.0.2.jar")
+   :reference-source-roots ("/home/anster/.ivy2/cache/org.scala-lang/scala-library/srcs/scala-library-2.11.2-sources.jar" "/home/anster/.ivy2/cache/org.scalatest/scalatest_2.11/srcs/scalatest_2.11-2.2.1-sources.jar" "/home/anster/.ivy2/cache/org.scala-lang/scala-reflect/srcs/scala-reflect-2.11.2-sources.jar" "/home/anster/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/srcs/scala-xml_2.11-1.0.2-sources.jar")))
+ 
+)
