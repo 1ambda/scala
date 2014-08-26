@@ -1,7 +1,6 @@
-import collection.mutable.Stack
 import org.scalatest._
 
-class CollectionSpec extends FlatSpec with Matchers{
+class ListTest extends FlatSpec with Matchers {
 
   behavior of "List()"
 
