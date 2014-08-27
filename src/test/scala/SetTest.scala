@@ -43,4 +43,20 @@ class SetTest extends FlatSpec with Matchers {
     assert(r1 == r2)
     assert(r1.exists(x => x == "grape"))
   }
+
+  behavior of "Set 1, 2, 3"
+
+  it must "contains 3" in {
+    var s = Set(1, 2, 3)
+
+    assert(s.contains(3))
+  }
+
+  it should "return false when exists( _ > 3 ) is invoked" in {
+    val s = Set(1, 2, 3)
+
+    val result = s.exists { _ > 3}
+    assert(result == false)
+  }
+
 }

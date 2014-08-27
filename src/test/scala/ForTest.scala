@@ -10,8 +10,7 @@ class ForTest extends FlatSpec with Matchers {
       case _: Array[Int] => true 
       case _ => false
     }
-
-    assert(matchTest(result))
+(matchTest(result))
   }
 
   "for loop" can "be nested" in {
@@ -30,5 +29,25 @@ class ForTest extends FlatSpec with Matchers {
     val expected = 2 to 7 by 2
 
     assert(result == expected) // Range will be converted implicitly
+  }
+
+  "foreach" can "be used to iterate collections" in {
+    val list = List(1, 2, 3, 4, 5);
+
+    val expected = 15;
+    var result1 = 0
+    var result2 = 0
+    var result3 = 0
+    var result4 = 0
+
+    list.foreach { result1 += _ }
+    list.foreach( result2 += _ )
+    list.foreach( x => result3 += x)
+    list.foreach( (x) => { result4 += x } )
+
+    assert(result1 == expected)
+    assert(result2 == expected)
+    assert(result3 == expected)
+    assert(result4 == expected)
   }
 }
