@@ -63,4 +63,33 @@ class PatternTest extends FlatSpec with Matchers {
     // "Unknown Type"
     assert(absoluteMinusOne("return \"Unknown Type\"") == "Unknown Type")
   }
+
+  "Exception" can "be used with pattern matching" in {
+    /*
+     * http://danielwestheide.com/blog/2012/12/26/
+     * the-neophytes-guide-to-scala-part-6-error-handling-with-try.html
+     */
+
+    case class Customer(age: Int, money: Double)
+    class Cigarettes
+
+    case class UnderAgeException(message: String) extends Exception(message)
+    case class NotEnoughMoneyException(message: String) extends Exception(message)
+
+    def buyCigarettets(customer: Customer): Cigarettes = {
+      if (customer.age < 19)
+        throw UnderAgeException(s"Customer must be older than 16 but was ${customer.age}")
+      else
+        new Cigarettes
+    }
+
+    // create new custommer whose age is 16
+    // and try to buy cigarettes. but, attemption should fail
+    val customer1 = Customer(16, 4500.0)
+    try {
+      buyCigarettets(customer1)
+    } catch {
+      case e: UnderAgeException => println(e.getMessage)
+    }
+  }
 }
