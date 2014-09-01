@@ -51,13 +51,19 @@ class CollectionBasicsTest extends FlatSpec with Matchers {
     def add2(x:Int):Int = adder(2, x:Int)
     val add3 = adder(3, _:Int)
 
-    val map = Map(
+    // Once difference type of function is saved in a map, It can't be called as a function
+    // Because It's type is inferred as AnyRef
+    // http://stackoverflow.com/questions/25599999/calling-functions-saved-in-a-map
+    val map1 = Map(
       "adder" -> { adder(_, _) },
       "add2" -> { add2(_) },
       "add3" -> { add3(_) }
     )
 
-    // Once a lambda is saved in a map, It can't be called as a function
-    // http://stackoverflow.com/questions/25599999/calling-functions-saved-in-a-map
+    val map2 = Map(
+      "adder" -> { adder(_, _) }
+    )
+
+    assert(map2("adder")(2, 3) == 5)
   }
 }
