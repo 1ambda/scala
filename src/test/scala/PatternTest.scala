@@ -77,19 +77,36 @@ class PatternTest extends FlatSpec with Matchers {
     case class NotEnoughMoneyException(message: String) extends Exception(message)
 
     def buyCigarettets(customer: Customer): Cigarettes = {
-      if (customer.age < 19)
-        throw UnderAgeException(s"Customer must be older than 16 but was ${customer.age}")
-      else
-        new Cigarettes
+
+      customer match {
+        case c: Customer if c.age < 19 =>
+          throw UnderAgeException(s"Customer must be older than 16 but was ${customer.age}")
+        case c: Customer if c.money < 2000.0 =>
+          throw NotEnoughMoneyException(s"""Cigarettets price is 2000.0
+                                            but the customer only has ${customer.money}""")
+        case _ => new Cigarettes
+      }
     }
 
     // create new custommer whose age is 16
-    // and try to buy cigarettes. but, attemption should fail
+    // and try to buy cigarettes which attemption should fail
     val customer1 = Customer(16, 4500.0)
     try {
       buyCigarettets(customer1)
+      fail("'buyCigarettets(customer1)' should throw UnderAgeException")
     } catch {
-      case e: UnderAgeException => println(e.getMessage)
+      case e: UnderAgeException => ;
+      case _: Throwable => fail("should catch UnderageException")
+    }
+
+    val customer2 = Customer(20, 1900.0)
+
+    try {
+      buyCigarettets(customer2)
+      fail("'buyCigarettets(customer2)' should throw NotEnoughMoneyException")
+    } catch {
+      case e: NotEnoughMoneyException => ;
+      case _: Throwable => fail("NotEnoughMoneyException allowed only")
     }
   }
 }
