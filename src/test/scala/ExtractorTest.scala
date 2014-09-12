@@ -59,7 +59,17 @@ class ExtractorTest extends FlatSpec with Matchers {
       }
     }
 
+    def getUserTwiceUpperEmail(email: String): String = {
+      email match {
+        case Email(Twice(x @ Uppercase()), domain) => x
+        case _ => ""
+      }
+    }
+
     assert(Twice.unapply("TOTO") == Some("TO"));
-    assert(isTwice("TOT0") == true)
+    assert(isTwice("TOTO") == true)
+
+    assert(getUserTwiceUpperEmail("TOTO@github.com") == "TO")
+    assert(getUserTwiceUpperEmail("TOT@github.com") == "")
   }
 }
