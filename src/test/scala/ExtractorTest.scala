@@ -60,6 +60,26 @@ class ExtractorTest extends FlatSpec with Matchers {
     }
 
     assert(Twice.unapply("TOTO") == Some("TO"));
-    assert(isTwice("TOT0") == true)
+    assert(isTwice("TOTO") == true)
+  }
+
+  "unapplySeq" can "be used to parse Seq" in {
+
+    object ExpandedEmail {
+      def unapplySeq(email: String): Option[(String, Seq[String])] = {
+        val parts = email split "@"
+
+        if (parts.length == 2) Some(parts(0), parts(1) split "\\." reverse) else None
+      }
+    }
+
+    val email = "user@sub1.sub.top"
+    val ExpandedEmail(name, top, sub @ _*) = email
+    val result = email match {
+      case ExpandedEmail(name2, top2, sub2 @ _*) => (name2, top2, sub2)
+    }
+
+    assert((name, top, sub) == ("user", "top", Seq("sub", "sub1")))
+    assert(result == ("user", "top", Seq("sub", "sub1")))
   }
 }
