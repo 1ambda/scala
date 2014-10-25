@@ -1,6 +1,6 @@
 (
- :root "/home/anster/github/learn-scala/."
- :cacheDir "/home/anster/github/learn-scala/.ensime_cache"
+ :root-dir "/home/anster/github/learn-scala"
+ :cache-dir "/home/anster/github/learn-scala/.ensime_cache"
  :name "learn-scala"
  :java-home "/usr/lib/jvm/java-8-oracle"
  :java-flags ("-Xms1024m" "-Xmx1024m" "-XX:ReservedCodeCacheSize=128m")
@@ -13,7 +13,7 @@
    :module-name "learn-scala"
    :source-roots ("/home/anster/github/learn-scala/src/main/scala" "/home/anster/github/learn-scala/src/main/java" "/home/anster/github/learn-scala/src/test/scala" "/home/anster/github/learn-scala/src/test/java")
    :target "/home/anster/github/learn-scala/target/scala-2.11/classes"
-   :test-target "/home/anster/github/learn-scala/target/scala-2.11/test-classes"
+   :test-targets ("/home/anster/github/learn-scala/target/scala-2.11/test-classes")
    :depends-on-modules nil
    :compile-deps ("/home/anster/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.2.jar")
    :runtime-deps nil
