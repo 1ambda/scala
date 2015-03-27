@@ -1,23 +1,24 @@
 (
- :root-dir "/home/anster/github/learn-scala"
- :cache-dir "/home/anster/github/learn-scala/.ensime_cache"
- :name "learn-scala"
- :java-home "/usr/lib/jvm/java-8-oracle"
- :java-flags ("-Xms1024m" "-Xmx1024m" "-XX:ReservedCodeCacheSize=128m")
- :reference-source-roots ("/usr/lib/jvm/java-8-oracle/src.zip")
- :scala-version "2.11.2"
+ :root-dir "/Users/1002471/github/scala"
+ :cache-dir "/Users/1002471/github/scala/.ensime_cache"
+ :name "scala"
+ :java-home "/Library/Java/JavaVirtualMachines/jdk1.8.0_40.jdk/Contents/Home"
+ :java-flags ("-Xms1024m" "-Xmx1024m" "-XX:ReservedCodeCacheSize=128m" "-XX:MaxMetaspaceSize=256m")
+ :reference-source-roots ("/Library/Java/JavaVirtualMachines/jdk1.8.0_40.jdk/Contents/Home/src.zip")
+ :scala-version "2.11.6"
  :compiler-args nil
  
  :subprojects ((
-   :name "learn-scala"
-   :module-name "learn-scala"
-   :source-roots ("/home/anster/github/learn-scala/src/main/scala" "/home/anster/github/learn-scala/src/main/java" "/home/anster/github/learn-scala/src/test/scala" "/home/anster/github/learn-scala/src/test/java")
-   :target "/home/anster/github/learn-scala/target/scala-2.11/classes"
-   :test-targets ("/home/anster/github/learn-scala/target/scala-2.11/test-classes")
+   :name "scala"
+   :module-name "scala"
+   :source-roots ("/Users/1002471/github/scala/src/test/scala" "/Users/1002471/github/scala/src/main/scala" "/Users/1002471/github/scala/src/test/scala-2.11" "/Users/1002471/github/scala/src/main/java" "/Users/1002471/github/scala/src/test/java" "/Users/1002471/github/scala/src/main/scala-2.11")
+   :target "/Users/1002471/github/scala/target/scala-2.11/classes"
+   :test-targets ("/Users/1002471/github/scala/target/scala-2.11/test-classes")
    :depends-on-modules nil
-   :compile-deps ("/home/anster/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.2.jar")
+   :compile-deps ("/Users/1002471/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.6.jar")
    :runtime-deps nil
-   :test-deps ("/home/anster/.ivy2/cache/org.scalatest/scalatest_2.11/bundles/scalatest_2.11-2.2.1.jar" "/home/anster/.ivy2/cache/org.scala-lang/scala-reflect/jars/scala-reflect-2.11.2.jar" "/home/anster/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/bundles/scala-xml_2.11-1.0.2.jar")
-   :reference-source-roots ("/home/anster/.ivy2/cache/org.scala-lang/scala-library/srcs/scala-library-2.11.2-sources.jar" "/home/anster/.ivy2/cache/org.scalatest/scalatest_2.11/srcs/scalatest_2.11-2.2.1-sources.jar" "/home/anster/.ivy2/cache/org.scala-lang/scala-reflect/srcs/scala-reflect-2.11.2-sources.jar" "/home/anster/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/srcs/scala-xml_2.11-1.0.2-sources.jar")))
+   :test-deps ("/Users/1002471/.ivy2/cache/org.scalatest/scalatest_2.11/bundles/scalatest_2.11-2.2.4.jar" "/Users/1002471/.ivy2/cache/org.scala-lang/scala-reflect/jars/scala-reflect-2.11.2.jar" "/Users/1002471/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/bundles/scala-xml_2.11-1.0.2.jar")
+   :doc-jars ("/Users/1002471/.ivy2/cache/org.scalatest/scalatest_2.11/docs/scalatest_2.11-2.2.4-javadoc.jar" "/Users/1002471/github/scala/target/scala-2.11/scala-note_2.11-1.0-javadoc.jar" "/Users/1002471/.ivy2/cache/org.scala-lang/scala-reflect/docs/scala-reflect-2.11.2-javadoc.jar" "/Users/1002471/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/docs/scala-xml_2.11-1.0.2-javadoc.jar" "/Users/1002471/.ivy2/cache/org.scala-lang/scala-library/docs/scala-library-2.11.6-javadoc.jar")
+   :reference-source-roots ("/Users/1002471/.ivy2/cache/org.scala-lang/scala-library/srcs/scala-library-2.11.6-sources.jar" "/Users/1002471/.ivy2/cache/org.scalatest/scalatest_2.11/srcs/scalatest_2.11-2.2.4-sources.jar" "/Users/1002471/.ivy2/cache/org.scala-lang/scala-reflect/srcs/scala-reflect-2.11.2-sources.jar" "/Users/1002471/.ivy2/cache/org.scala-lang.modules/scala-xml_2.11/srcs/scala-xml_2.11-1.0.2-sources.jar")))
  
 )
