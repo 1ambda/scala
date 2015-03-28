@@ -1,6 +1,6 @@
 // http://docs.scala-lang.org/overviews/core/futures.html
 
-package future
+package async 
 
 import org.scalatest._
 import org.scalatest.concurrent._
@@ -41,6 +41,20 @@ class FutureTest extends FreeSpec with Matchers with ScalaFutures {
     f.onComplete {
       case Success(price) => price should be (expected)
       case Failure(t: Throwable) => t.getMessage should be ("error01")
+    }
+  }
+
+  "recoverWith" in {
+    val f = Future {
+      Book.getBook(23)
+    } recoverWith {
+      case _: NoSuchElementException =>
+        Future { Book.getBook(25) }
+    }
+
+    f.onComplete {
+      case Success(book) => book.price should be (30.25)
+      case Failure(t: Throwable) => fail
     }
   }
 }
