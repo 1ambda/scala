@@ -8,13 +8,16 @@ version := "1.0"
 
 scalaVersion := "2.11.6"
 
+val scalazVersion = "7.1.1"
+
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test",
-  "org.scalaz" %% "scalaz-core" % "7.1.1",
-  "org.scalaz" %% "scalaz-effect" % "7.1.1",
-  "org.scalaz" %% "scalaz-concurrent" % "7.1.1",
-  "org.scalaz" %% "scalaz-iteratee" % "7.1.1",
+  "org.scalaz" %% "scalaz-core" % scalazVersion,
+  "org.scalaz" %% "scalaz-effect" % scalazVersion,
+  "org.scalaz" %% "scalaz-concurrent" % scalazVersion,
+  "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
   "com.typesafe.slick" % "slick_2.10" % "2.1.0",
+  "net.databinder.dispatch" %% "dispatch-core" % "0.11.2",
   "org.slf4j" % "slf4j-nop" % "1.6.4"
 )
 
