@@ -20,12 +20,12 @@ class StateMonadTest1 extends FlatSpec with Matchers {
     now <- get[Stack]
     val (x :: xs) = now
     unit <- put(xs) // unit == (), since put return [Stack, Unit]
-  } yield x
+  } yield x 
 
   def push2(a: Int): State[Stack, Unit] = for {
     now <- get[Stack]
     unit <- put(a :: now)
-  } yield unit
+  } yield unit 
 
   "Push(3) pop pop on List(5, 1, 2, 4)" should "return (List(1, 2, 4), 5)" in  {
     val s: Stack = List(5, 1, 2, 4)
