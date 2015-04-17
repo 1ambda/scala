@@ -4,6 +4,7 @@ import org.scalatest._
 
 // http://marcus-christie.blogspot.kr/2014/03/scala-understanding-self-type.html
 // https://coderwall.com/p/t_rapw/cake-pattern-in-scala-self-type-annotations-explicitly-typed-self-references-explained
+// http://www.slideshare.net/LappleApple/scala-self-types-by-gregor-hein
 class Self extends FlatSpec with Matchers {
 
   trait Connector {
@@ -19,7 +20,7 @@ class Self extends FlatSpec with Matchers {
   }
 
   class UserService {
-    this: Connector =>
+    self: Connector =>
 
     def getAllUsers() = {
       val con = getConnection
