@@ -2,3 +2,4 @@ target/
 submission/
 project/target/
 project/project/target
+.ensime_cache/
