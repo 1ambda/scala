@@ -264,8 +264,326 @@ When an exception occured, it has no effect on our system. Just the parent actor
 
 Each actor defines its own **supervisor strategy**, which tells Akks how to deal with certain types of erros occurring in your children. There are basically two different types of superviosr strategy.
 
-- `OneForOneStrategy`
-- `AllForOneStrategy`
+- `OneForOneStrategy`: an error in one of your children will only affect the child actor from which the error originated
+- `AllForOneStrategy`: an error will affect all of your child actors.
+
+Whatever strategy you have, you need to specify a `Decider: PartialFunction[Throwable, Directive]` which describe how to deal with your problematic hild actor (or all your child actors)
+
+### Directive
+
+[akka-actor: FaultHandling.scala](https://github.com/akka/akka/blob/8485cd2ebb46d2fba851c41c03e34436e498c005/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L97)
+
+```scala
+sealed trait Directive
+case object Resume extends Directive
+case object Restart extends Directive
+case object Stop extends Directive
+case object Escalate extends Directive
+```
+
+- **Resume:** the child actor or all actors will simply resume processing messages as if nothing extraordinary had happened.
+- **Restart:** create a new instance of your child actor or all actors. The reasoning behind this is that you assume the internal state of actor/actors is corrupted.
+- **Stop:** kill the actor.
+- **Esaclate:** delegate the decision about what to do to your own parent actor.
+
+[Akka: defaultStrategy](https://github.com/akka/akka/blob/8485cd2ebb46d2fba851c41c03e34436e498c005/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L154)
+
+```scala
+final val defaultDecider: Decider = {
+  case _: ActorInitializationException ⇒ Stop
+  case _: ActorKilledException         ⇒ Stop
+  case _: DeathPactException           ⇒ Stop
+  case _: Exception                    ⇒ Restart
+}
+
+/**
+ * When supervisorStrategy is not specified for an actor this
+ * is used by default. OneForOneStrategy with decider defined in
+ * [[#defaultDecider]].
+ */
+final val defaultStrategy: SupervisorStrategy = {
+  OneForOneStrategy()(defaultDecider)
+}
+```
+
+### Actor Life Cycle
+
+you can *hook* at `preStart`, `postStop`, `preRestart`, `postRestart` methods. So if you wanna print log when `Register` actor restarting, override `preRestart` or `postRestart`
+
+```scala
+object Register {
+  // sealed trait can be extended only in the same file as its declaration
+  sealed trait Article
+  case object Espresso extends Article
+  case object Cappuccino extends Article 
+  case class Transaction(article: Article)
+  class PaperJamException(msg: String) extends Exception(msg)
+}
+
+class Register extends Actor with ActorLogging {
+  import Register._
+  import Barista._
+
+  var revenue = 0
+  val prices = Map[Article, Int](
+    Espresso -> 150,
+    Cappuccino -> 250
+  )
+
+  def receive = {
+    case Transaction(article) =>
+      val price = prices(article)
+      revenue += price
+
+      // will throw a exception in about half of the cases
+      // but no effect on our system. just the parent actor will be notified
+      if (Random.nextBoolean())
+        throw new PaperJamException("PaperJamException occured")
+
+      sender ! Receipt(price)
+  }
+
+  override def postRestart(reason: Throwable) {
+    super.postRestart(reason)
+
+    log.info(s"Register actor restarted: ${reason.getMessage}")
+  }
+}
+```
+
+In short
+
+- parent `Actor` handles childrens's exceptions
+- hook methods can be inserted into the child actor error originated
+
+### Restart N times
+
+[Akka: Fault Tolerance](http://doc.akka.io/docs/akka/snapshot/scala/fault-tolerance.html)
+
+```scala
+
+import akka.actor.Actor
+ 
+class Supervisor extends Actor {
+  import akka.actor.OneForOneStrategy
+  import akka.actor.SupervisorStrategy._
+  import scala.concurrent.duration._
+ 
+  override val supervisorStrategy =
+    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+      case _: ArithmeticException      => Resume
+      case _: NullPointerException     => Restart
+      case _: IllegalArgumentException => Stop
+      case _: Exception                => Escalate
+    }
+ 
+  def receive = {
+    case p: Props => sender() ! context.actorOf(p)
+  }
+}
+```
+
+you can use `orElse` simplify strategy code. 
+
+```scaka
+  val baristaDecider: Decider = {
+    case _: PaperJamException => Restart 
+  }
+
+  override val supervisorStrategy =
+    OneForOneStrategy()(
+      baristaDecider.orElse(SupervisorStrategy.defaultStrategy.decider))
+```
+
+### Error Kernel Pattern
+
+- if an actor carries important internal state
+- then it should delegate dangeours tasks to child actors
+- so as to prevent that state-carrying actor from crashing!
+
+for example, below code is not safe because the `Register` actor which carrying `revenue` state might crash.
+
+```scala
+class Register extends Actor with ActorLogging {
+  import Register._
+  import Barista._
+
+  var revenue = 0
+  val prices = Map[Article, Int](
+    Espresso -> 150,
+    Cappuccino -> 250
+  )
+
+  def receive = {
+    case Transaction(article) =>
+      val price = prices(article)
+      revenue += price
+
+      // will throw a exception in about half of the cases
+      if (Random.nextBoolean())
+        throw new PaperJamException("PaperJamException occured")
+
+      sender ! Receipt(price)
+  }
+}
+```
+
+Let's apply kernel pattern into our `Register` actor.
+
+```scala
+object Register {
+  // sealed trait can be extended only in the same file as its declaration
+  sealed trait Article
+  case object Espresso extends Article
+  case object Cappuccino extends Article 
+  case class Transaction(article: Article)
+}
+
+class Register extends Actor with ActorLogging {
+  import Register._
+  import Barista._
+  import ReceiptPrinter._
+
+  var revenue = 0
+  val prices = Map[Article, Int](
+    Espresso -> 150,
+    Cappuccino -> 250
+  )
+
+  val printer = context.actorOf(Props[ReceiptPrinter], "Printer")
+  import context.dispatcher
+  implicit val timeout = Timeout(4 seconds)
+
+  def receive = {
+    case Transaction(article) =>
+      val price = prices(article)
+      val customer = sender
+      (printer ? PrintJob(price)).map((customer, _)).pipeTo(self)
+
+    case (customer: ActorRef, Receipt(price)) =>
+      revenue += price
+      customer ! Receipt(price)
+  }
+
+  override def postRestart(reason: Throwable) {
+    super.postRestart(reason)
+    log.info(s"restarted, revenue: $revenue")
+  }
+}
+
+object ReceiptPrinter {
+  case class PrintJob(amount: Int)
+  class PaperJamException(msg: String) extends Exception(msg)
+}
+
+class ReceiptPrinter extends Actor with ActorLogging {
+  import ReceiptPrinter._
+  import Barista._
+  var paperJam = false;
+
+  def receive = {
+    case PrintJob(amount) => sender ! createReceipt(amount)
+  }
+
+  def createReceipt(amount: Int): Receipt = {
+    // will throw a exception in about half of the cases
+    if (Random.nextBoolean()) paperJam = true
+    if (paperJam) throw new PaperJamException("PaperJamException occured")
+    Receipt(amount)
+  }
+
+  override def postRestart(reason: Throwable) {
+    super.postRestart(reason)
+    log.info(s"restarted. paperJam: $paperJam")
+  }
+}
+```
+
+We used the default supervisor strategy to have the printer actor restart upon failure.
+
+```scala
+val customer = sender
+(printer ? PrintJob(price)).map((customer, _)).pipeTo(self)
+```
+
+> Assigning the sender to a val is necessary for similar reasons: When mapping a future, we are no longer in the context of our actor either – since sender is a method, it would now likely return the reference to some other actor that has sent us a message, not the one we intended.
+
+### Timeouts
+
+When an exception occurs in the `ReceiptPrinter`, this leads to an `AskTimeoutException` which comes back to the `Barista` actor in an unsuccessfully completed `Future`
+
+Since `map` to `Future` is success-biased, the customer piped will also receiv a `Failure` containing an `AskTimeoutException`. To resolve this, let's recover by mapping `CombackLater` messages.
 
 
+```scala
+class Barista extends Actor {
+  import Register._
+  import Barista._
+  import Cup._
+  import Customer._
 
+  implicit val timeout = Timeout(4.seconds)
+  val register = context.actorOf(Props[Register], "Register")
+
+  // to use the same thread pool as our Barista actor use
+  import context.dispatcher
+
+  def receive = {
+    case EspressoRequest =>
+      val receipt: Future[Any] = register ? Transaction(Espresso)
+      receipt.map((Cup(Filled), _)).recover {
+        case _: akka.pattern.AskTimeoutException => CombackLater
+      }.pipeTo(sender)
+
+    case ClosingTime => context.stop(self)
+  }
+}
+
+object Customer {
+  case object EspressoOrder
+  case object CombackLater
+}
+
+class Customer(barista: ActorRef) extends Actor with ActorLogging {
+  import Customer._
+  import Barista._
+  import Cup._
+
+  def receive = {
+    case EspressoOrder => barista ! EspressoRequest
+
+    case (Cup(Filled), Receipt(amount)) =>
+      log.info(s"amount: $amount for $self")
+
+    case CombackLater =>
+      log.info("OMG! Comback Later")
+  }
+}
+```
+
+### Watch
+
+you can **watch** other actors which is supervised by your actors.
+
+```scala
+class Customer(barista: ActorRef) extends Actor with ActorLogging {
+  import Customer._
+  import Barista._
+  import Cup._
+
+  context.watch(barista)
+
+  def receive = {
+    case EspressoOrder => barista ! EspressoRequest
+
+    case (Cup(Filled), Receipt(amount)) =>
+      log.info(s"amount: $amount for $self")
+
+    case CombackLater =>
+      log.info("OMG! comback later")
+
+    case akka.actor.Terminated(barista) =>
+      log.info("OMG, let's find another coffeehouse")
+  }
+}
+```
