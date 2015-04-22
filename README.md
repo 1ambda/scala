@@ -41,4 +41,5 @@ by Martin Odersky
 
 #### akka
 
+#### RxScala
 

@@ -24,6 +24,7 @@ libraryDependencies ++= Seq(
   "net.databinder.dispatch" %% "dispatch-json4s-jackson" % dispatchVersion,
   "com.typesafe.akka" % "akka-actor_2.11" % "2.3.9",
   "com.typesafe.akka" % "akka-testkit_2.11" % "2.3.9",
+  "io.reactivex" % "rxscala_2.11" % "0.24.1",
   "org.slf4j" % "slf4j-nop" % "1.6.4"
 )
 
