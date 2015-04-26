@@ -20,6 +20,8 @@ by Martin Odersky
 [Chapter 4](http://1ambda.github.io/reactive-programming-4/) - Observable, Rx, Scheduler  
 [Chapter 5](http://1ambda.github.io/reactive-programming-5/) - Actor   
 
+[Week1](https://github.com/1ambda/scala/tree/master/reactive-programming/week1) - Monad  
+[Week2](https://github.com/1ambda/scala/tree/master/reactive-programming/week2) - Functional Reactive Programming  
 
 ### scala playground
 
