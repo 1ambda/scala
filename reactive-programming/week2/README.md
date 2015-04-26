@@ -396,17 +396,297 @@ class Consolidator(observed: List[BankAccount]) extends Subscriber {
 
 ### Functional Reactive Programming
 
+> Reactive Programming is about reacting to sequences of events that happen in **time**.
+ In funcitonal view: **Aggregate an event sequence into a signal**
+ 
+- A signal is a value that change over time
+- It is represented as a function from time to the value domain
+- Instead of propagating updates to mutable state, we define **new signals** in terms of existing ones
+
+Whenever the mouse moves
+
+(1) Event-based view
+
+an event 
+
+```scala
+MouseMoved(toPos: Position)
+```
+
+is fired
+
+(2) FRP view
+
+A signal
+
+```scala
+mousePosition: Signal[Position]
+```
+
+which at **any point in time** represents the current mouse position
+
+<br/>
+
+[SO: What is Reactive Programming?](http://stackoverflow.com/questions/1028250/what-is-functional-reactive-programming/1030631#1030631)
+
+> In pure functional programming, there are no side-effects. For many types of software (for example, anything with user interaction) side-effects are necessary at some level.
+  
+> One way to get side-effect like behavior while still retaining a functional style is to use functional reactive programming. This is the combination of functional programming, and reactive programming. (The Wikipedia article you linked to is about the latter.)
+ 
+> The basic idea behind reactive programming is that there are certain datatypes that represent a value "over time". Computations that involve these changing-over-time values will themselves have values that change over time.
+
+> For example, you could represent the mouse coordinates as a pair of integer-over-time values. Let's say we had something like (this is pseudo-code):
+
+```javascript
+x = <mouse-x>;
+y = <mouse-y>;
+```
+
+> At any moment in time, x and y would have the coordinates of the mouse. Unlike non-reactive programming, we only need to make this assignment once, and the x and y variables will stay "up to date" automatically. This is why reactive programming and functional programming work so well together: reactive programming removes the need to mutate variables while still letting you do a lot of what you could accomplish with variable mutations.
+
+<br/>
+
+Event streaming data flow programming systems such as **Rx** are related the term FRP
+is not commonly used for them.
+
+[Scala.rx](https://github.com/lihaoyi/scala.rx)
+
+```scala
+import rx._
+val a = Var(1); val b = Var(2)
+val c = Rx{ a() + b() }
+println(c()) // 3
+a() = 4
+println(c()) // 6
+```
+
+#### Fundamental Signal Operations
+
+```scala
+// Obtain the value of the signal at the current time
+mousePosition()
+
+// Define a signal in terms of the signals
+def isRectangle(LL: Position, UR: Position): Signal[Boolean] = {
+  Signal {
+    val pos = mousePosition()
+    LL <= pos && pos <= UR
+  }
+}
+
+// Signal constant
+val sig = Signal(3)
+
+// Time Varying Signals
+val sig = Var(3)
+sig.update(5) 
+```
+
+In Signal, there is no notion of **old value**. So this obviously makes no sense
+
+```scala
+s() = s() + 1
+```
+
+```scala
+val num = Var(1)
+val twice = Signal(num() * 2)
+num() = 2
+assertTrue(twice() == 4)
+
+// but
+val num = Var(1)
+val twice = Signal(num() * 2)
+num = Var(2)
+assertTrue(twise() == 2)
+```
+
+#### FRP Implementation
+
+```scala
+class Signal[T](expr: => T) {
+  def apply(): T = ???
+}
+
+object Signal {
+  def apply[T](expr: => T) = new Signal(expr)
+}
+
+class Var[T](expr: => T) extends Signal[T](expr) {
+  def update(expr: => T): Unit = ???
+}
+
+object Var {
+  def apply[T](expr: => T) = new Var(expr)
+}
+```
+
+Each signal maintains
+
+- its current value
+- the current expression that defines the signal value
+- a set of observers: the other signals that depends on its value
+
+Then, if the signal changes, all observers need to be re-evaluated
+
+<br/>
+
+How do we record dependencies in observers?
+
+- When evaluating a signal-valued expression, need to know which signal `caller`
+gets defined or updated by the expression
+- If we know that, then executing a `sig()` means adding `caller` to the observers of `sig
+- When signal `sig`'s value changes, all previously observing signals are re-evaluated and
+the set `sig.observer` is cleared
+- Re-evaluation will re-enter a calling signal `caller` in `sig.observers`, as long as
+`caller`'s value still depends on `sig`
+
+```scala
+@RunWith(classOf[JUnitRunner])
+class FRP extends FunSuite with ShouldMatchers {
+  def consolidate(acs: List[BankAccount]): Signal[Int] =
+    Signal(acs.map(_.balance()).sum)
 
 
+  test("FRP") {
+    val a = new BankAccount()
+    val b = new BankAccount()
+    val c = consolidate(List(a, b))
 
+    assert(c() == 0)
 
+    a deposit 20
+    assert(c() == 20)
 
+    b deposit 30
+    assert(c() == 50)
 
+    val xchange = Signal(246.00)
+    val inDollar = Signal(c() * xchange())
+    assert(inDollar() == 12300.00)
 
+    b withdraw 10
+    assert(inDollar() == 9840.0)
+  }
+}
 
+class StackableVariable[T](init: T) {
+  private var values: List[T] = List(init)
 
+  def value: T = values.head
+  def withValue[R](newValue: T)(op: => R): R = {
+    // you can think of newValue as the caller
+    values = newValue :: values
+    try op finally values = values.tail
+  }
+}
 
+// sentinel signal object
+object NoSignal extends Signal[Nothing](???) {
+  override def computeValue() = ()
+}
 
+object Signal {
+  private val caller = new StackableVariable[Signal[_]](NoSignal)
+  def apply[T](expr: => T) = new Signal(expr)
+}
 
+class Signal[T](expr: => T) {
+  import Signal._
 
+  private var myExpr: () => T = _
+  private var myValue: T = _
+  private var observers: Set[Signal[_]] = Set()
+  update(expr)
+
+  protected def update(expr: => T): Unit = {
+    myExpr = () => expr
+    computeValue()
+  }
+
+  // update all observers with newly calculated `newValue`
+  protected def computeValue(): Unit = {
+    // 1. add `this` to `caller.values` so that signals in `myExpr` can use `this` as caller
+    // 2. execute `myExpr`. signals in `myExpr` will add this into `observers`
+    val newValue = caller.withValue(this)(myExpr())
+
+    if (newValue != myValue) {
+      myValue = newValue
+      val obs = observers
+      // computeValue will call observer's `myExpr`
+      // then, this.apply() also will be called.
+      // so we need to clear this.observers before to avoid duplication
+      observers = Set()
+      obs foreach { _.computeValue() }
+    }
+  }
+
+  // add caller, and return `myValue`
+  def apply(): T = {
+    observers += caller.value
+    assert(!caller.value.observers.contains(this), "cylick signal definition")
+    myValue
+  }
+}
+
+object Var {
+  def apply[T](expr: => T) = new Var(expr)
+}
+
+class Var[T](expr: => T) extends Signal[T](expr) {
+  override def update(expr: => T): Unit = super.update(expr)
+}
+
+class BankAccount {
+  var balance = Var(0)
+
+  def deposit(amount: Int): Unit =  if (amount > 0){
+    // avoid cyclic definition
+    val b = balance()
+    balance() = b + amount
+  }
+
+  def withdraw(amount: Int): Unit = {
+    if (0 < amount && amount <= balance()) {
+      val b = balance()
+      balance() = b - amount
+    }
+    else throw new Error("insufficient funds")
+  }
+}
+```
+
+#### Thread-Local State
+
+Use `scala.util.DynamicVariable` instead of `StackableVariable` to avoid concurrent problems`o
+`DynamicVariable` supports **Thread-local state** which means each thread accesses a separate copy of a variable.
+
+```scala
+object Signal {
+  // private val caller = new StackableVariable[Signal[_]](NoSignal)
+  private val caller = new DynamicVariable[Signal[_]](NoSignal)
+  def apply[T](expr: => T) = new Signal(expr)
+}
+```
+
+Thread-local state still comes with a number of disadvantages
+
+- Its imperative nature often produces hidden dependencies which are hard to manage.
+- Its implementation on the JDK involves a global hash table lookup which can be a performance problem
+- It does not play well in situations where threads are multiplexed between several tasks
+
+<Br/>
+
+- Instead of maintaining a thread-local variables, pass its current value into a signal
+ expression as an implicit parameters
+
+- This is purely functional. But it currently requires more boilerplate than the thread-local solution
+(Future version of Scala might solve that problem)
+
+### Summary
+
+- Callback Style 
+- Discrete Event Handling 
+- Observer Pattern
+- FRP
 
