@@ -63,7 +63,8 @@ class CalculatorSuite extends FunSuite with ShouldMatchers {
     "c" -> Signal(Ref("b")),
     "d" -> Signal(Plus(Ref("a"), Ref("b"))),
     "e" -> Signal(Ref("f")),
-    "f" -> Signal(Plus(Ref("c"), Ref("e")))
+    "f" -> Signal(Plus(Ref("g"), Ref("e"))),
+    "g" -> Signal(Minus(Ref("a"), Ref("b")))
   )
 
   test("calculator: getReferenceExpr test") {
@@ -100,9 +101,45 @@ class CalculatorSuite extends FunSuite with ShouldMatchers {
   }
 
   test("calculator: prevent cyclic definition") {
-    println(getReferenceExpr("f", refs))
+    val cyclicRefs: Map[String, Signal[Expr]] = Map(
+      "a" -> Signal(Ref("a")), // a == a
+      "b" -> Signal(Ref("c")), // b == c, c == b
+      "c" -> Signal(Ref("b")),
+      "d" -> Signal(Plus(Ref("d"), Ref("e"))),
+      "e" -> Signal(Literal(0.5)),
+      "f" -> Signal(Ref("g")),
+      "g" -> Signal(Ref("h")),
+      "h" -> Signal(Ref("f")),
+      "i" -> Signal(Ref("j")),
+      "j" -> Signal(Literal(1.0)),
+      "k" -> Signal(Ref("i"))
+    )
+
+    // a = a
+    assert(eval(Ref("a"), cyclicRefs) equals Double.NaN)
+
+    // b == c, c == b
+    assert(eval(Ref("b"), cyclicRefs) equals Double.NaN)
+
+    // d = e + f
+    assert(eval(Ref("d"), cyclicRefs) equals Double.NaN)
+
+    // f = g, g = h, h = f
+    assert(eval(Ref("f"), cyclicRefs) equals Double.NaN)
+    assert(eval(Ref("g"), cyclicRefs) equals Double.NaN)
+    assert(eval(Ref("h"), cyclicRefs) equals Double.NaN)
+
+    // i = j, j = 1, k = i
+    assert(eval(Ref("k"), cyclicRefs) == 1.0)
+  }
+
+  test("calculator: computeValues test") {
+
   }
 }
+
+
+
 
 
 

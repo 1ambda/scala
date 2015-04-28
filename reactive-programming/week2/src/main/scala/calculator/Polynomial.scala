@@ -18,15 +18,13 @@ object Polynomial {
   def computeSolutions(a: Signal[Double], b: Signal[Double],
                        c: Signal[Double], delta: Signal[Double]): Signal[Set[Double]] = {
     Signal {
-      val B = b()
-      val A = a()
-      val D = delta()
+      var solutions: Set[Double] = Set()
 
       // (-b ± √Δ) / (2a)
-      val first = if (D < 0) 0 else (-B + sqrt(D)) / 2 * A
-      val second = if (D < 0) 0 else (-B - sqrt(D)) / 2 * A
+      if (delta() >= 0) solutions += (-b() + sqrt(delta())) / (2 * a())
+      if (delta() >= 0) solutions += (-b() - sqrt(delta())) / (2 * a())
 
-      Set(first, second)
+      solutions
     }
   }
 }
