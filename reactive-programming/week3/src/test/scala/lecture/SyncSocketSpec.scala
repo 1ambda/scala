@@ -5,14 +5,13 @@ import org.scalatest._
 import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class SocketSpec extends FunSuite with Matchers {
-  import Server._
+class SyncSocketSpec extends FunSuite with Matchers {
 
   test("blocking") {
-    val socket = new Socket {}
+    val socket = new SyncSocket {}
 
     val packet = socket.readFromMemory()
-    val result = socket.send(US, packet)
+    val result = socket.send(socket.US, packet)
 
     packet.toList should be (List(1, 2, 3, 4))
     result.toList should be (List(5, 6, 7, 8))

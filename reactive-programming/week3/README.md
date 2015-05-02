@@ -178,3 +178,66 @@ trait AsyncSocket {
 }
 ```
 
+### recoverWith, fallbackTo
+
+HTTP modeling
+
+```scala
+object Http extends Socket {
+
+  case class URL(url: String)
+
+  class HttpMethod
+  object HttpMethod {
+    case object POST extends HttpMethod
+    case object GET extends HttpMethod
+    case object PUT extends HttpMethod
+    case object DELETE extends HttpMethod
+  }
+
+  class HttpStatue
+  object HttpStatus {
+    case object isOK extends HttpStatue
+  }
+
+  case class Request(body: Array[Byte], method: HttpMethod)
+  case class Response(body: Array[Byte], status: HttpStatue)
+
+  def apply(url: URL, req: Request): Future[Response] = Future {
+    sleepRandom
+    Response(req.body.toList.map(x => (x + 4).toByte).toArray, HttpStatus.isOK)
+  }
+}
+```
+
+We are going to use `recover` and `recoverWith` first. They look like
+
+```scala
+def recover(f: PartuialFunction[Throwable, T]): Future[T]
+def recoverWith(f: PartialFunction[Throwable, Future[T]]): Future[T]
+```
+
+```scala
+trait ResilientSocket extends Socket {
+
+  import Http._
+
+  def readFromMemory(): Future[Array[Byte]] = Future {
+    sleepRandom
+    List(1, 2, 3, 4).map(_.toByte).toArray
+  }
+
+  private def sendTo(url: URL, packet: Array[Byte]): Future[Array[Byte]] =
+    Http(url, Request(packet, HttpMethod.POST))
+      .filter(_.status == HttpStatus.isOK)
+      .map(_.body)
+
+  def sendToEurope(packet: Array[Byte]): Future[Array[Byte]] =
+    if (Random.nextBoolean() == true) Future.failed(new RuntimeException("sendToEurope() failed")) 
+    else sendTo(URL("mail.server.eu"), packet)
+
+  def sendToUS(packet: Array[Byte]): Future[Array[Byte]] =
+    if (Random.nextBoolean() == true) Future.failed(new RuntimeException("sendToEurope() failed")) 
+    else sendTo(URL("mail.server.us"), packet)
+}
+```
