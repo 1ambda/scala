@@ -12,7 +12,7 @@ import scala.util.{Failure, Success}
 
 
 @RunWith(classOf[JUnitRunner])
-class AsyncSocketSpec extends FunSuite with ShouldMatchers with AsyncAssertions with ScalaFutures {
+class AsyncSocketSpec extends FunSuite with ShouldMatchers with AsyncAssertions with ScalaFutures with mailServer {
   import Http._
   val limit = timeout(Span(2000, Millis))
 
@@ -24,8 +24,8 @@ class AsyncSocketSpec extends FunSuite with ShouldMatchers with AsyncAssertions 
     val socket = new AsyncSocket {}
 
     val response = for {
-      packet <- socket.readFromMemory()
-      result <- socket.send(socket.Europe, packet)
+      packet <- socket.asyncReadFromMemory()
+      result <- socket.send(Europe, packet)
     } yield result
 
     whenReady(response) {
@@ -37,11 +37,11 @@ class AsyncSocketSpec extends FunSuite with ShouldMatchers with AsyncAssertions 
     val w = new Waiter
 
     val socket = new AsyncSocket {}
-    val packet: Future[Array[Byte]] = socket.readFromMemory()
+    val packet: Future[Array[Byte]] = socket.asyncReadFromMemory()
 
     packet.onComplete {
       case Success(p) =>
-        val result: Future[Array[Byte]] = socket.send(socket.Europe, p)
+        val result: Future[Array[Byte]] = socket.send(Europe, p)
 
         result.onComplete {
           case Success(b) =>

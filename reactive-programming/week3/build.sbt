@@ -6,6 +6,8 @@ scalacOptions ++= Seq("-deprecation", "-feature")
 
 (fork in Test) := false
 
+testOptions in Test += Tests.Argument("-P")
+
 projectDetailsMap := {
   val currentCourseId = "reactive-002"
 
