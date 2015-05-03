@@ -365,7 +365,7 @@ async {
 
 ### Retry: Using `await`
 
-```
+```scala
 // package.scala
 package object lecture {
   // implicit classes 
