@@ -1,6 +1,121 @@
 # Week 3
 
-Try, Future, Async
+Try, Future, Async, Await, Cancellable
+
+### Cancellable
+
+```scala
+@RunWith(classOf[JUnitRunner])
+class CancellableSpec extends FunSuite with Matchers {
+
+  test("cancellable should allow stopping the computation") {
+
+    val p = Promise[String]()
+
+    val cancellable = Cancellable.run() { status =>
+      async {
+        while(status.nonCancelled) {
+          var a = 3
+          a = a + 3
+        }
+        p.success("cancelled")
+      }
+    }
+
+    cancellable.cancel()
+    assert(Await.result(p.future, 1 second) == "cancelled")
+  }
+
+  test("cancellable should allow completion if not cancelled") {
+    val p = Promise[String]()
+
+    val cancellable = Cancellable.run() { status =>
+      async {
+        while(status.nonCancelled) {
+          p.success("doing")
+        }
+
+        p.success("cancelled")
+      }
+    }
+
+    assert(Await.result(p.future, 1 second) == "doing")
+  }
+}
+
+trait CancellableStatus {
+  def isCancelled: Boolean
+  def nonCancelled = !isCancelled
+}
+
+trait Cancellable {
+  def cancel(): Unit
+  def status: CancellableStatus
+}
+
+object Cancellable {
+  def apply() = new Cancellable {
+    val p = Promise[Unit]()
+
+    override def cancel: Unit = p.tryComplete(Success(()))
+
+    val status: CancellableStatus = new CancellableStatus {
+      override def isCancelled: Boolean = p.future.value != None
+    }
+  }
+
+  def run()(cont: CancellableStatus => Future[Unit]): Cancellable = {
+    val cancellable = Cancellable()
+    cont(cancellable.status) // run continuation feeding status
+    cancellable
+  }
+}
+```
+
+### sequence
+
+
+As of now, Can't `sequence` using async in a value class. We need to implement it using `Promise` instead
+
+```scala
+// compiler error: nested class is not allowed in value class
+def all[T](fs: List[Future[T]]): Future[List[T]] = async {
+
+  var fts = fs
+  var xs: List[T] = List()
+
+  while (fts != Nil) {
+    val x = await { fts.head }
+    xs = x :: xs
+    fts = fts.tail
+  }
+
+  xs
+}
+```
+
+### blokcing
+
+[Ref: SO](http://stackoverflow.com/questions/13097754/asynchronous-io-in-scala-with-futures#answer-13099594)
+
+> It notifies the thread pool that the block of code you pass to it contains long-running or blocking operations. This allows the pool to temporarily spawn new workers to make sure that it never happens that all of the workers are blocked. This is done to prevent starvation (locking up the thread pool) in blocking applications.
+
+```scala
+import scala.concurrent.{future, blocking, Future, Await, ExecutionContext.Implicits.global}
+import scala.concurrent.duration._
+
+// Retrieve URLs from somewhere
+val urls: List[String] = ...
+
+// Download image (blocking operation)
+val imagesFuts: List[Future[...]] = urls.map {
+  url => future { blocking { download url } }
+}
+
+// Do something (display) when complete
+val futImages: Future[List[...]] = Future.sequence(imagesFuts)
+Await.result(futImages, 10 seconds).foreach(display)
+```
 
 ### Try
 

@@ -1,7 +1,8 @@
 package nodescala
 
+
 import scala.language.postfixOps
-import scala.util.{Try, Success, Failure}
+import scala.util.{Random, Try, Success, Failure}
 import scala.collection._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -14,12 +15,78 @@ import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
 class NodeScalaSuite extends FunSuite {
+  def delayed[T](x: T) = Future { blocking { randomSleep; x } }
+  def instantly[T](x: T) = Future { x }
+  def failed = Future.failed(new RuntimeException)
+  def randomSleep = Thread.sleep(Random.nextInt(400))
+
+  // ref: https://class.coursera.org/reactive-002/forum/thread?thread_id=436
+  test("CancellationTokenSource should allow stopping the computation") {
+    val p = Promise[String]()
+
+    val cts = Future.run() { ct =>
+      async {
+        while (ct.nonCancelled) {
+          val a = 3
+          a + 4
+        }
+        p.success("cancelled")
+      }
+    }
+    cts.unsubscribe()
+    assert(Await.result(p.future, 1 second) == "cancelled")
+  }
+
+  // ref: https://class.coursera.org/reactive-002/forum/thread?thread_id=436
+  test("CancellationTokenSource should allow completion if not cancelled") {
+    val p = Promise[String]()
+
+    Future.run() { ct =>
+      async {
+        while(ct.nonCancelled) {
+          p.success("doing")
+        }
+
+        p.success("cancelled")
+      }
+    }
+
+    assert(Await.result(p.future, 1 second) != "cancelled")
+  }
+
+  // ref: https://class.coursera.org/reactive-002/forum/thread?thread_id=511
+  test("continueWith should wait for the first future to complete") {
+
+    val delay = Future.delay(1 second)
+    val always = (f: Future[Unit]) => 42
+
+    try {
+      Await.result(delay.continueWith(always), 500 millis)
+      assert(false)
+    } catch {
+      case t: TimeoutException => assert(true)
+    }
+  }
+
+  // ref: https://class.coursera.org/reactive-002/forum/thread?thread_id=640
+  test("now: Success") {
+    val p = Promise[Unit]()
+    p.success(())
+    p.future.now
+    assert(true)
+  }
+
+  test("now: Failure") {
+    intercept[NoSuchElementException] {
+      delayed(3).now
+    }
+  }
 
   test("A Future should always be completed") {
     val always = Future.always(517)
-
     assert(Await.result(always, 0 nanos) == 517)
   }
+
   test("A Future should never be completed") {
     val never = Future.never[Int]
 
@@ -31,7 +98,44 @@ class NodeScalaSuite extends FunSuite {
     }
   }
 
-  
+  test("Future.all Success case") {
+    val fs = (3 to 5).toList.map(delayed(_))
+    assert(Await.result(Future.all(fs), 2 seconds) == List(3, 4, 5))
+  }
+
+  test("Future.all Failure case") {
+    val fs1 = failed :: (3 to 5).toList.map(delayed(_))
+    val fs2 = delayed(3) :: delayed(4) :: failed :: Nil
+
+  }
+
+  test("Promise isCompleted test") {
+    val p = Promise()
+    p.failure(new RuntimeException)
+
+    assert(p.isCompleted)
+  }
+
+  test("any") {
+    val five = Future.any(List(delayed(3), delayed(4), instantly(5)))
+    assert(5 == Await.result(five, 2 seconds))
+  }
+
+  test("ensuring") {
+      val a: Future[String] = Future {
+        randomSleep
+        "Success"
+      }
+
+      val b: Future[String] = Future {
+        randomSleep
+        "Success2"
+      }
+
+    val ensured = a ensure b
+    assert(Await.result(ensured, 3 seconds) == "Success")
+  }
+
   
   class DummyExchange(val request: Request) extends Exchange {
     @volatile var response = ""
