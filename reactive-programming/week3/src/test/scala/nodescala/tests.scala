@@ -195,6 +195,7 @@ class NodeScalaSuite extends FunSuite {
       l.emit(req)
     }
   }
+
   test("Server should serve requests") {
     val dummy = new DummyServer(8191)
     val dummySubscription = dummy.start("/testDir") {
