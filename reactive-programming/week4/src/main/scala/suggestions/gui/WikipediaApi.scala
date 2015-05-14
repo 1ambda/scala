@@ -37,8 +37,9 @@ trait WikipediaApi {
      *
      * E.g. `"erik", "erik meijer", "martin` should become `"erik", "erik_meijer", "martin"`
      */
-    def sanitized: Observable[String] = ???
-
+    def sanitized: Observable[String] = obs.map {
+      str => str.replace(" ", "_")
+    }
   }
 
   implicit class ObservableOps[T](obs: Observable[T]) {
@@ -48,7 +49,7 @@ trait WikipediaApi {
      *
      * E.g. `1, 2, 3, !Exception!` should become `Success(1), Success(2), Success(3), Failure(Exception), !TerminateStream!`
      */
-    def recovered: Observable[Try[T]] = ???
+    def recovered: Observable[Try[T]] = obs.map(x => Success(x)).onErrorReturn(t => Failure(t))
 
     /** Emits the events from the `obs` observable, until `totalSec` seconds have elapsed.
      *

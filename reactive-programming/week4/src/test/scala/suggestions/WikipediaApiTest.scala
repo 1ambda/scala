@@ -16,7 +16,7 @@ import org.scalatest.junit.JUnitRunner
 
 
 @RunWith(classOf[JUnitRunner])
-class WikipediaApiTest extends FunSuite {
+class WikipediaApiTest extends FunSuite with Matchers {
 
   object mockApi extends WikipediaApi {
     def wikipediaSuggestion(term: String) = Future {
@@ -50,6 +50,21 @@ class WikipediaApiTest extends FunSuite {
     )
     assert(completed && count == 3, "completed: " + completed + ", event count: " + count)
   }
+
+  test("WikipediaAPI should recover from errors") {
+    case class ex1(msg: String) extends RuntimeException
+
+    val obs: Observable[Int] = Observable.create { o =>
+      o.onNext(1)
+      o.onNext(2)
+      o.onError(ex1("exception1"))
+      Subscription { o.onCompleted() }
+    }
+
+    val result = obs.recovered.toBlocking.toList
+    result should be (List(Success(1), Success(2), Failure(ex1("exception1"))))
+  }
+
   test("WikipediaApi should correctly use concatRecovered") {
     val requests = Observable.just(1, 2, 3)
     val remoteComputation = (n: Int) => Observable.just(0 to n : _*)
