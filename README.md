@@ -24,6 +24,7 @@ by Martin Odersky
 [Week2](https://github.com/1ambda/scala/tree/master/reactive-programming/week2) - Functional Reactive Programming  
 [Week3](https://github.com/1ambda/scala/tree/master/reactive-programming/week3) - Future, Promise, Async, Await  
 [Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable   
+[Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor  
 
 ### scala playground
 

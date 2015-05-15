@@ -57,7 +57,7 @@ trait WikipediaApi {
      *
      * Note: uses the existing combinators on observables.
      */
-    def timedOut(totalSec: Long): Observable[T] = ???
+    def timedOut(totalSec: Long): Observable[T] = obs.
 
     /** Given a stream of events `obs` and a method `requestMethod` to map a request `T` into
      * a stream of responses `S`, returns a stream of all the responses wrapped into a `Try`.
