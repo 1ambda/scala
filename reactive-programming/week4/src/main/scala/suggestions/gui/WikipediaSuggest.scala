@@ -80,38 +80,43 @@ object WikipediaSuggest extends SimpleSwingApplication with ConcreteSwingApi wit
      *  `myEditorPane.text = "act"` : sets the content of `myEditorPane` to "act"
      */
 
-    // TO IMPLEMENT
-    val searchTerms: Observable[String] = ???
+    val searchTerms: Observable[String] = searchTermField.textValues
 
-    // TO IMPLEMENT
-    val suggestions: Observable[Try[List[String]]] = ???
-
-    // TO IMPLEMENT
-    val suggestionSubscription: Subscription =  suggestions.observeOn(eventScheduler) subscribe {
-      x => ???
+    val suggestions: Observable[Try[List[String]]] = searchTerms concatRecovered {
+      term => ObservableEx(wikipediaSuggestion(term)) timedOut(5L)
     }
 
-    // TO IMPLEMENT
-    val selections: Observable[String] = ???
+    val suggestionSubscription: Subscription =  suggestions.observeOn(eventScheduler) subscribe {
+      x => x match {
+        case Success(xs) => suggestionList.listData = xs
+        case Failure(t) => status.text = t.getMessage
+      }
+    }
 
-    // TO IMPLEMENT
-    val pages: Observable[Try[String]] = ???
+    val selections: Observable[String] = button.clicks filter {
+      _ => suggestionList.selection.items.nonEmpty
+    } map {
+      _ => suggestionList.selection.items(0)
+    }
 
-    // TO IMPLEMENT
+    val pages: Observable[Try[String]] = selections concatRecovered {
+      t => ObservableEx(wikipediaPage(t)) timedOut(5L)
+    }
+
     val pageSubscription: Subscription = pages.observeOn(eventScheduler) subscribe {
-      x => ???
+      x =>  x match {
+        case Success(text) => editorpane.text = text
+        case Failure(t) => editorpane.text = t.getMessage
+      }
     }
 
   }
-
 }
-
 
 trait ConcreteWikipediaApi extends WikipediaApi {
   def wikipediaSuggestion(term: String) = Search.wikipediaSuggestion(term)
   def wikipediaPage(term: String) = Search.wikipediaPage(term)
 }
-
 
 trait ConcreteSwingApi extends SwingApi {
   type ValueChanged = scala.swing.event.ValueChanged

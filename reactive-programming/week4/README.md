@@ -1,5 +1,41 @@
 # Week4, Oberservable
 
+### Connectable Observable
+
+```scala
+// ref: http://reactivex.io/documentation/operators.html#connectable
+// ref: http://leecampbell.blogspot.kr/2010/08/rx-part-7-hot-and-cold-observables.html
+test("ConnectableObservable Exploit2") {
+  val hot = Observable.interval(200 millis).publish
+  hot.connect
+
+  Thread.sleep(500)
+
+  val r = hot.replay
+  r.connect
+
+  r.subscribe(x => println(s"Observer1 : $x"))
+  Thread.sleep(200)
+  r.subscribe(x => println(s"Observer2 : $x"))
+
+  hot.take(600 millis).toBlocking.toList
+}
+
+// result
+Observer1 : 0
+Observer1 : 1
+Observer1 : 2
+Observer2 : 0
+Observer2 : 1
+Observer2 : 2
+Observer1 : 3
+Observer2 : 3
+Observer1 : 4
+Observer2 : 4
+Observer1 : 5
+Observer2 : 5
+```
+
 ### From Try to Future
 
 [Future and Try are not dual](http://cstheory.stackexchange.com/questions/20117/in-what-sense-are-scalas-tryt-and-futuret-dual)

@@ -57,7 +57,12 @@ trait WikipediaApi {
      *
      * Note: uses the existing combinators on observables.
      */
-    def timedOut(totalSec: Long): Observable[T] = obs.
+    def timedOut(totalSec: Long): Observable[T] = obs.take(totalSec seconds)
+      /* {
+        // ConnectableObservable version
+        val o = obs.publish; o.connect
+        o.replay(totalSec seconds).refCount.take(totalSec seconds)
+      } */
 
     /** Given a stream of events `obs` and a method `requestMethod` to map a request `T` into
      * a stream of responses `S`, returns a stream of all the responses wrapped into a `Try`.
@@ -84,7 +89,9 @@ trait WikipediaApi {
      *
      * Observable(Success(1), Succeess(1), Succeess(1), Succeess(2), Succeess(2), Succeess(2), Succeess(3), Succeess(3), Succeess(3))
      */
-    def concatRecovered[S](requestMethod: T => Observable[S]): Observable[Try[S]] = ???
+    def concatRecovered[S](requestMethod: T => Observable[S]): Observable[Try[S]] =
+      obs.flatMap(x => requestMethod(x).recovered)
+      // obs.map(x => requestMethod(x).recovered).flatten
 
   }
 

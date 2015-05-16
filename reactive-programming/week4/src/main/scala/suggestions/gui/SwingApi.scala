@@ -52,8 +52,6 @@ trait SwingApi {
       * @return an observable with a stream of text field updates
       */
 
-    def a = {
-    }
     def textValues: Observable[String] = Observable.create {o =>
       field.subscribe {
         case ValueChanged(tf) => o.onNext(tf.text)

@@ -82,4 +82,65 @@ class WikipediaApiTest extends FunSuite with Matchers {
     assert(total == (1 + 1 + 2 + 1 + 2 + 3), s"Sum: $total")
   }
 
+  test("concatRecovered spec1") {
+    case class ex1(msg: String) extends RuntimeException
+
+    val o1 = Observable.from(List(1, 2, 3, 4))
+    val o2 = o1.concatRecovered(x => if (x == 3) Observable.error(ex1("ex")) else Observable.just(x))
+
+
+    val result = o2.toBlocking.toList
+
+    result should be (List(Success(1), Success(2), Failure(ex1("ex")), Success(4)))
+  }
+
+  test("concatRecovered spec2") {
+    val o1 = Observable.from(List(1, 2))
+    val o2 = o1.concatRecovered(x => Observable.from(List(x, x)))
+
+    val result = o2.toBlocking.toList
+    result should be (List(Success(1), Success(1), Success(2), Success(2)))
+  }
+
+  // ref: https://class.coursera.org/reactive-002/forum/thread?thread_id=700
+  test("There should be only 1 element before timeout") {
+    val o = Observable.from(List(1, 2, 3)).zip(Observable.interval(700 millis))
+
+    o.subscribe(x => println(x))
+    Thread.sleep(800)
+
+    val r = o.timedOut(1L)
+    val elements = r.toBlocking.toList
+    elements should be (List((1, 0)))
+  }
+
+  // ref: http://reactivex.io/documentation/operators.html#connectable
+  // ref: http://leecampbell.blogspot.kr/2010/08/rx-part-7-hot-and-cold-observables.html
+
+  ignore ("ConnectableObservable Exploit2") {
+    val hot = Observable.interval(200 millis).publish
+    hot.connect
+
+    Thread.sleep(500)
+
+    val r = hot.replay
+    r.connect
+
+    r.subscribe(x => println(s"Observer1 : $x"))
+    Thread.sleep(200)
+    r.subscribe(x => println(s"Observer2 : $x"))
+
+    hot.take(600 millis).toBlocking.toList
+  }
+
+  ignore ("ConnectableObservable Exploit1") {
+    val o = Observable.interval(200 millis).take(1 seconds).publish /* create connectable observable */
+    o.connect /* emit items to its subscribers */
+    o.subscribe(x => println(s"Observer 1: $x"))
+    Thread.sleep(500)
+    o.subscribe(x => println(s"Observer 2: $x"))
+
+    o.take(1 seconds).toBlocking.toList
+  }
+
 }
