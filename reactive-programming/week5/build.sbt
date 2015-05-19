@@ -1,3 +1,5 @@
+import ch.epfl.lamp.SbtCourseraPlugin.autoImport.ProjectDetails
+
 submitProjectName := "actorbintree"
 
 scalaVersion := "2.11.5"
