@@ -1,8 +1,6 @@
-import ch.epfl.lamp.SbtCourseraPlugin.autoImport.ProjectDetails
-
 submitProjectName := "actorbintree"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 scalacOptions ++= Seq("-deprecation", "-feature")
 

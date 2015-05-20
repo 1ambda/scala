@@ -242,6 +242,8 @@ How to we apply these principles in our bank account transfer example?
 
 ### Testing Actors
 
+
+
 ### Summary
 
 - Actors are fully encapsulated, independent agents of computation
