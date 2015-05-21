@@ -238,7 +238,323 @@ How to we apply these principles in our bank account transfer example?
 
 ### Designing Actor Systems
 
+#### Getter
 
+```scala
+class Client {
+  import Client._
+
+  val client = new AsyncHttpClient
+  def getBlocking(url: String): String = {
+
+    /* will be blokcing */
+    val res = client.prepareGet(url).execute().get
+
+    if (res.getStatusCode < 400)
+      res.getResponseBodyExcerpt(131072 /* 128KB */)
+    else throw BadStatus(res.getStatusCode)
+  }
+
+  def get(url: String)(implicit exec: Executor): Future[String] = {
+
+    // java future
+    val f = client.prepareGet(url).execute()
+    // scala promise
+    val p = Promise[String]()
+
+    f.addListener(new Runnable {
+      override def run(): Unit = {
+        val res = f.get
+
+        if (res.getStatusCode < 400) p.success(res.getResponseBodyExcerpt(131072))
+        else p.failure(BadStatus(res.getStatusCode))
+      }
+    }, exec)
+
+    p.future
+  }
+}
+
+object Client {
+  case class BadStatus(statusCode: Int) extends RuntimeException
+}
+```
+
+> A reactive application is non-blocking & event-driven top to bottom 
+
+#### Akka.pattern `pipeTo`
+
+```scala
+implicit val exec: ExecutionContextExecutor = context.dispatcher
+
+val f: Future[String] = WebClient.get(url)
+
+f.onComplete {
+  case Success(body) => self ! body
+  case Failure(t)    => self ! Status.Failure(t)
+}
+```
+
+simply 
+
+```scala
+f.pipeTo(self)
+
+// or just
+WebClient get url pipeTo self
+```
+
+#### Getter
+
+```scala
+class Getter(url: String, depth: Int) extends Actor {
+  implicit val exec: ExecutionContextExecutor = context.dispatcher
+
+  WebClient get url pipeTo self
+
+  // same as
+  // val f: Future[String] = WebClient.get(url)
+  // f.onComplete {
+  //   case Success(body) => self ! body
+  //   case Failure(t)    => self ! Status.Failure(t)
+  // }
+
+  def receive = {
+    case body: String =>
+      for (link <- findLinks(body))
+        context.parent ! Controller.check(link, depth)
+
+    case _: Status.Failure =>
+      context.parent ! Done
+  }
+
+  def findLinks(body: String): Unit = {
+    val document = Jsoup.parse(body, url)
+    val links = document.select("a[href]")
+
+    for (link <- links.iterator().asScala) yield link.absUrl("href")
+  }
+}
+
+object Getter {
+  sealed trait GetterEvent
+  case object Done extends GetterEvent
+}
+```
+
+#### ActorLogging
+
+`ActorLogging` provides a logger
+
+[Akka Docs - How to Log](http://doc.akka.io/docs/akka/snapshot/scala/logging.html#How_to_Log)
+
+```scala
+class MyActor extends Actor {
+  val log = Logging(context.system, this)
+  override def preStart() = {
+    log.debug("Starting")
+  }
+  ...
+  ...
+  
+// same as 
+class MyActor extends Actor with akka.actor.ActorLogging {
+ ...
+ ...
+```
+
+#### Controller
+
+```scala
+class Controller extends Actor with ActorLogging {
+  import Controller._
+
+  var cache = Set.empty[String] // url cache already retrieved
+  var chdilren = Set.empty[ActorRef]
+
+  def receive = {
+    case Check(url, depth) =>
+      log.debug("{} checking {}", depth, url)
+
+      if (!cache(url) && depth > 0)
+        chdilren += context.actorOf(Props(new Getter(url, depth - 1)))
+
+      cache += url
+
+    case Getter.Done =>
+      chdilren -= sender
+      if (chdilren.isEmpty) context.parent ! Result(cache)
+  }
+}
+
+object Controller {
+  sealed trait ControllerEvent
+  case class Check(url: String, depth: Int) extends  ControllerEvent
+  case class Result(cache: Set[String]) extends ControllerEvent
+}
+```
+
+#### Handling Timeout
+
+The receive timeout is reset by every received message
+
+```scala
+class Controller extends Actor with ActorLogging {
+  context.setReceiveTimeout(10 seconds)
+  
+  def receive = {
+    case ReceiveTimeout => children foreach (_ ! Getter.Abort)
+  }
+  
+// Getter
+def receive {
+  case Abort => ... 
+}
+```
+
+#### Scheduler
+
+Akka includes a timer service optimized for high volume, short durations and frequent cancellation
+
+```scala
+trait Scheduler {
+  def scheduleOnce(delay: FiniteDuration, target: ActorRef, msg: Any)
+        (implicit ec: ExecutionContext): Cancellable
+}
+```
+
+Using `Scheduler, we can modify the previous code like
+
+```scala
+class Controller extends Actor with ActorLogging {
+  import Controller._
+
+  var cache = Set.empty[String] // url cache already retrieved
+  var chdilren = Set.empty[ActorRef]
+
+  context.system.scheduler.scheduleOnce(10.seconds) {
+    chdilren foreach (_ ! Getter.Abort)
+  }
+```
+
+But this code is problematic since the block pass as the parameter of `scheduleOnce` function 
+runs on outside of `Actor` context. So it is not **thread-safe**
+
+We should fix the above code like
+
+```scala
+class Controller extends Actor with ActorLogging {
+  import Controller._
+
+  var cache = Set.empty[String] // url cache already retrieved
+  var chdilren = Set.empty[ActorRef]
+
+  context.system.scheduler.scheduleOnce(10.seconds, self, Timeout) 
+
+  def receive = {
+    case Check(url, depth) =>
+      log.debug("{} checking {}", depth, url)
+
+      if (!cache(url) && depth > 0)
+        chdilren += context.actorOf(Props(new Getter(url, depth - 1)))
+
+      cache += url
+
+    case Getter.Done =>
+      chdilren -= sender
+      if (chdilren.isEmpty) context.parent ! Result(cache)
+
+    case Timeout => chdilren foreah (_ ! Getter.Abort)
+  }
+}
+
+object Controller {
+  sealed trait ControllerEvent
+  case class Check(url: String, depth: Int) extends  ControllerEvent
+  case class Result(cache: Set[String]) extends ControllerEvent
+  case object Timeout extends ControllerEvent
+}
+```
+
+This code is also problematic. Do not refer to actor state from code running asynchronously 
+
+```scala
+  def receive = {
+    case Get(url) =>
+      if (cache contains url) sender ! cache(url)
+      else
+        WebClient get url foreach { body => 
+          cache += url -> body
+          sender ! body
+        }
+  }
+  
+// correct way
+def receive = {
+  case Get(url) =>
+    if (cache contains url) sender ! cache(url)
+    else {
+      val client: ActorRef = sender /* sender might be different from origin in the map function*/
+      WebClient get(url) map(Result(client, url, _)) pipeTo self
+    }
+
+  case Result(client, url, body) =>
+    cache += url -> body
+    client ! body
+}
+```
+
+### Receptionist
+
+```scala
+class Receptionist extends Actor {
+  import Receptionist._
+
+  var reqNo = 0
+  def runNext(queue: Jobs): Receive = {
+    reqNo += 1
+    if (queue.isEmpty) waiting
+    else {
+      val controller = context.actorOf(Props[Controller], s"c$reqNo")
+      controller ! Controller.Check(queue.head.url, 2)
+      running(queue)
+    }
+  }
+
+  def enqueueJob(queue: Jobs, job: Job): Receive = {
+    if (queue.size > 3) {
+      sender ! Failed(job.url)
+      running(queue)
+    } else running(queue :+ job)
+  }
+
+  def receive = waiting
+
+  val waiting: Receive = {
+    case Get(url) => context.become(runNext(Vector(Job(sender, url))))
+  }
+
+  def running(queue: Jobs): Receive = {
+    case Controller.Result(links) =>
+      val job = queue.head
+      job.client ! Result(job.url, links)
+      context.stop(sender)
+      context.become(runNext(queue.tail))
+
+    case Get(url) => context.become(enqueueJob(queue, Job(sender, url)))
+  }
+}
+
+object Receptionist {
+  case class Job(client: ActorRef, url: String)
+  type Jobs = Vector[Job]
+
+  sealed trait ReceptionistEvent
+  case class Failed(url: String) extends ReceptionistEvent
+  case class Get(url: String)    extends ReceptionistEvent
+  case class Result(url: String, links: Set[String]) extends ReceptionistEvent
+}
+```
 
 ### Testing Actors
 
@@ -250,3 +566,9 @@ How to we apply these principles in our bank account transfer example?
 - Messages are the only way to interact with actors
 - Explicit messaging allow explicit treatment of reliability
 - The order in which messages are processed is mostly undefined
+- Actors are run by a dispatcher (potentially shared) which can also run `Futuer`s
+
+- Prefer immutable data structures, since they can be shared
+- Prefer `context.become` for different states, with data local to the behavior
+- A reactive application is non-blocking & event-driven top to bottom
+- Do not refer to actor stats from code running asynchronously 

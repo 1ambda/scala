@@ -6,9 +6,7 @@ import com.ning.http.client.AsyncHttpClient
 
 import scala.concurrent.{Promise, Future}
 
-class Client {
-  import Client._
-
+object WebClient {
   val client = new AsyncHttpClient
   def getBlocking(url: String): String = {
 
@@ -38,8 +36,7 @@ class Client {
 
     p.future
   }
-}
 
-object Client {
+  def shutdown(): Unit = client.close()
   case class BadStatus(statusCode: Int) extends RuntimeException
 }

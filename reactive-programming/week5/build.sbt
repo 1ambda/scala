@@ -6,6 +6,8 @@ scalacOptions ++= Seq("-deprecation", "-feature")
 
 (fork in Test) := false
 
+libraryDependencies += "org.jsoup" % "jsoup" % "1.8.2"
+
 projectDetailsMap := {
   val currentCourseId = "reactive-002"
 
