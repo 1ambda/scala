@@ -10,7 +10,7 @@ class CrawlerApp extends Actor {
 
   receptionist ! Receptionist.Get("http://www.google.com")
 
-  context.setReceiveTimeout(10 seconds)
+  context.setReceiveTimeout(20 seconds)
 
   def receive = {
     case Receptionist.Result(url, links) =>

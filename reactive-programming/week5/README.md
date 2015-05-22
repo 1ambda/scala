@@ -556,7 +556,73 @@ object Receptionist {
 }
 ```
 
+#### Main
+
+```scala
+// command
+// sbt "run-main akka.Main lecture.crawler.CrawlerApp" -Dakka.loglevel=DEBUG -Dakka.actor.debug.receive=on
+
+package lecture.crawler
+
+import akka.actor.{ReceiveTimeout, Actor, Props}
+
+import scala.concurrent.duration._
+
+class CrawlerApp extends Actor {
+
+  val receptionist = context.actorOf(Props[Receptionist], "receptionist")
+
+  receptionist ! Receptionist.Get("http://www.google.com")
+
+  context.setReceiveTimeout(20 seconds)
+
+  def receive = {
+    case Receptionist.Result(url, links) =>
+      println(links.toVector.sorted.mkString(s"Results for '$url':\n", "\n", "\n"))
+
+    case Receptionist.Failed(url) =>
+      println(s"Failed to fetch '$url'\n")
+
+    case ReceiveTimeout =>
+      context.stop(self)
+  }
+
+  override def postStop(): Unit = {
+    WebClient.shutdown()
+  }
+}
+
+// response
+Results for 'http://www.google.com':
+http://maps.google.co.kr/maps?hl=ko&tab=wl
+http://news.google.co.kr/nwshp?hl=ko&tab=wn
+http://www.google.co.kr/?gfe_rd=cr&ei=eepdVbb4FMyT8QfY44CgBA
+http://www.google.co.kr/advanced_search?hl=ko&authuser=0
+http://www.google.co.kr/chrome/index.html?hl=ko&brand=CHNG&utm_source=ko-hpp&utm_medium=hpp&utm_campaign=ko
+http://www.google.co.kr/history/optout?hl=ko
+http://www.google.co.kr/imghp?hl=ko&tab=wi
+http://www.google.co.kr/intl/ko/about.html
+http://www.google.co.kr/intl/ko/ads/
+http://www.google.co.kr/intl/ko/options/
+http://www.google.co.kr/intl/ko/policies/privacy/
+http://www.google.co.kr/intl/ko/policies/terms/
+http://www.google.co.kr/intl/ko/services/
+http://www.google.co.kr/language_tools?hl=ko&authuser=0
+http://www.google.co.kr/preferences?hl=ko
+http://www.google.co.kr/setprefdomain?prefdom=US&sig=0_lK0Z9J8V5G23lhASnQ7ePJ38nOo%3D
+http://www.google.com
+http://www.youtube.com/?gl=KR&tab=w1
+https://accounts.google.com/ServiceLogin?hl=ko&continue=http://www.google.co.kr/%3Fgfe_rd%3Dcr%26ei%3DeepdVbb4FMyT8QfY44CgBA
+https://drive.google.com/?tab=wo
+https://mail.google.com/mail/?tab=wm
+https://play.google.com/?hl=ko&tab=w8
+https://plus.google.com/102197601262446632410
+```
+
 ### Testing Actors
+
+- Tests can only verify externally observable effects.
+
 
 
 
@@ -572,3 +638,5 @@ object Receptionist {
 - Prefer `context.become` for different states, with data local to the behavior
 - A reactive application is non-blocking & event-driven top to bottom
 - Do not refer to actor stats from code running asynchronously 
+
+- Tests can only verify externally observable effects.
