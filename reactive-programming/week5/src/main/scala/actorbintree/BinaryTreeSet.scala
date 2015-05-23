@@ -3,6 +3,7 @@
  */
 package actorbintree
 
+import akka.actor.FSM.->
 import akka.actor._
 import scala.collection.immutable.Queue
 
@@ -66,7 +67,10 @@ class BinaryTreeSet extends Actor {
 
   // optional
   /** Accepts `Operation` and `GC` messages. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive = {
+    case GC => ???
+    case op: Operation => root ! op
+  }
 
   // optional
   /** Handles messages while garbage collection is performed.
@@ -87,6 +91,7 @@ object BinaryTreeNode {
   case object CopyFinished
 
   def props(elem: Int, initiallyRemoved: Boolean) = Props(classOf[BinaryTreeNode],  elem, initiallyRemoved)
+  def childProps(elem: Int) = props(elem, false)
 }
 
 class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
@@ -100,8 +105,40 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   def receive = normal
 
   // optional
-  /** Handles `Operation` messages and `CopyTo` requests. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive =
+    handleContains orElse
+    handleInsert orElse {
+      case _ => ???
+    }
+
+  def handleInsert: Receive = {
+    case Insert(client, reqId, elem) =>
+      if (elem == this.elem && !initiallyRemoved) client ! OperationFinished(reqId)
+      else if (elem > this.elem
+        && subtrees.isDefinedAt(Right)) subtrees(Right) ! Insert(client, reqId, elem)
+      else if (elem > this.elem) {
+        /* create right child */
+        subtrees = subtrees + (Right -> context.actorOf(BinaryTreeNode.childProps(elem)))
+        client ! OperationFinished(reqId)
+      } else if (elem < this.elem
+        && subtrees.isDefinedAt(Left))  subtrees(Left)  ! Insert(client, reqId, elem)
+      else if (elem < this.elem) {
+        /* create left child */
+        subtrees = subtrees + (Left -> context.actorOf(BinaryTreeNode.childProps(elem)))
+        client ! OperationFinished(reqId)
+      } else assert(false, "should not be here")
+  }
+
+  def handleContains: Receive = {
+    case Contains(client, reqId, elem) =>
+      if (elem == this.elem && !initiallyRemoved) client ! ContainsResult (reqId, true)
+      else if (elem > this.elem
+        && subtrees.isDefinedAt(Right)) subtrees (Right) ! Contains (client, reqId, elem)
+      else if (elem < this.elem
+        && subtrees.isDefinedAt(Left))  subtrees (Left)  ! Contains (client, reqId, elem)
+      else client ! ContainsResult(reqId, false)
+  }
+
 
   // optional
   /** `expected` is the set of ActorRefs whose replies we are waiting for,

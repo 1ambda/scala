@@ -4,19 +4,26 @@
 package actorbintree
 
 import akka.actor.{ Props, ActorRef, ActorSystem }
-import org.scalatest.{ BeforeAndAfterAll, FlatSpec }
+import org.scalatest._
 import akka.testkit.{ TestProbe, ImplicitSender, TestKit }
-import org.scalatest.Matchers
 import scala.util.Random
 import scala.concurrent.duration._
-import org.scalatest.FunSuiteLike
 
-class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSuiteLike with Matchers with BeforeAndAfterAll with ImplicitSender
-{
+class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
+with FunSuiteLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   def this() = this(ActorSystem("BinaryTreeSuite"))
+  var tree: ActorRef = _
+  val req1 = 1
+  val req2 = 2
+  val req3 = 3
+  val req4 = 4
+  val req5 = 5
 
   override def afterAll: Unit = system.shutdown()
+  before {
+    tree = system.actorOf(Props[BinaryTreeSet])
+  }
 
   import actorbintree.BinaryTreeSet._
 
@@ -36,24 +43,58 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     }
 
   def verify(probe: TestProbe, ops: Seq[Operation], expected: Seq[OperationReply]): Unit = {
-    val topNode = system.actorOf(Props[BinaryTreeSet])
-
     ops foreach { op =>
-      topNode ! op
+      tree ! op
     }
 
     receiveN(probe, ops, expected)
     // the grader also verifies that enough actors are created
   }
 
-  test("proper inserts and lookups") {
-    val topNode = system.actorOf(Props[BinaryTreeSet])
+  test("Contains test") {
+    tree ! Contains(testActor, req1, 1)
+    expectMsg(ContainsResult(req1, false))
 
-    topNode ! Contains(testActor, id = 1, 1)
+    tree ! Contains(testActor, req2, 0)
+    expectMsg(ContainsResult(req2, false))
+  }
+
+  test("Insert test") {
+    tree ! Insert(testActor, req1, 1)
+    expectMsg(OperationFinished(req1))
+
+    tree ! Contains(testActor, req2, 1)
+    expectMsg(ContainsResult(req2, true))
+
+    tree ! Contains(testActor, req3, 2)
+    expectMsg(ContainsResult(req3, false))
+  }
+
+  test("remove test") {
+    tree ! Remove(testActor, req1, 0)
+    expectMsg(OperationFinished(req1))
+
+    tree ! Insert(testActor, req2, 0)
+    expectMsg(OperationFinished(req2))
+
+    tree ! Contains(testActor, req3, 0)
+    expectMsg(ContainsResult(req3, true))
+
+    tree ! Remove(testActor, req4, 0)
+    expectMsg(OperationFinished(req4))
+
+    tree ! Contains(testActor, req5, 0)
+    expectMsg(ContainsResult(req5, false))
+  }
+
+  test("proper inserts and lookups") {
+    val tree = system.actorOf(Props[BinaryTreeSet])
+
+    tree ! Contains(testActor, id = 1, 1)
     expectMsg(ContainsResult(1, false))
 
-    topNode ! Insert(testActor, id = 2, 1)
-    topNode ! Contains(testActor, id = 3, 1)
+    tree ! Insert(testActor, id = 2, 1)
+    tree ! Contains(testActor, id = 3, 1)
 
     expectMsg(OperationFinished(2))
     expectMsg(ContainsResult(3, true))
@@ -114,15 +155,15 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     }
 
     val requester = TestProbe()
-    val topNode = system.actorOf(Props[BinaryTreeSet])
+    val tree = system.actorOf(Props[BinaryTreeSet])
     val count = 1000
 
     val ops = randomOperations(requester.ref, count)
     val expectedReplies = referenceReplies(ops)
 
     ops foreach { op =>
-      topNode ! op
-      if (rnd.nextDouble() < 0.1) topNode ! GC
+      tree ! op
+      if (rnd.nextDouble() < 0.1) tree ! GC
     }
     receiveN(requester, ops, expectedReplies)
   }

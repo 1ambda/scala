@@ -1,5 +1,50 @@
 ## Week5, Actor
 
+### Actor Binary Tree Set
+
+[Ref - Coursera, Reactive Programming in Scala](https://www.coursera.org/course/reactive)
+
+Each node is represented by one actor in **actor-based binary tree set**. The advantage of such an actor-based 
+solution is that is can execute fully asynchronously and in parallel.
+
+#### Handling of Removal
+
+well-known implementation of removal requires reconstructing tree. 
+This results in nodes would need to communicate and coordinate between each other 
+while additional operations arrive from the external world.
+
+Therefore, instead of implementing the usual binary tree removal, 
+we can use a flag that is stored in every tree node (`removed`) indicating whether 
+the element in the node(actor) has been removed or not. 
+
+This will result in very simple implementation that is concurrent and correct with minimal effort. 
+Unfortunately this decision results in the side effect that the tree set accumulates **garbage** over time.
+ 
+#### Garbage Collection 
+ 
+To overcome this limitation we need to implement a **garbage collection** feature. 
+Whenever your binary tree set receives a `GC` message, 
+it should clean up all the removed elements, while additional operations might arrive from the external world.
+
+The garbage collection task can be implemented in two steps. 
+
+- The first subtask is to implement an internal `CopyTo` operation on the binary tree that copies 
+all its non-removed content from the old binary tree to a provided new one. 
+This implementation can assume that no operations arrive while the copying happens. 
+
+- The second part of the implementation is to implement garbage collection in the manager 
+(`BinaryTreeSet`) by using the copy operation. 
+The newly constructed tree should replace the old one and all actors from the old one should be stopped. 
+Since copying assumes no other concurrent operations, the manager should handle the case 
+when operations arrive while still performing the copy in the background.
+
+Keep in mind that the garbage collection process is invisible from the outside.
+ 
+#### Implementation
+
+The `BinaryTreeSet` represents the whole binary tree. This is also the only actor that is 
+explicitly created by the user and the only actor the user sends messages to.
+
 ### Using `become`
 
 ```scala
@@ -742,7 +787,6 @@ def Receptionist extends Actor {
   }
 }
 ```
-
 
 ### Summary
 

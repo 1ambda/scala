@@ -6,9 +6,8 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
 import org.scalatest.{Matchers, WordSpecLike}
 
-import scala.util.Success
 import scala.concurrent.duration._
-import scala.concurrent.Await
+import scala.util.Success
 
 class ToggleSpec extends TestKit(ActorSystem("TestSys"))
 with ImplicitSender with WordSpecLike with Matchers {
