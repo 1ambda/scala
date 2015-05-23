@@ -619,11 +619,129 @@ https://play.google.com/?hl=ko&tab=w8
 https://plus.google.com/102197601262446632410
 ```
 
-### Testing Actors
+### Testing Actor Systems
 
-- Tests can only verify externally observable effects.
+[Ref - Akka Doc: Testing Actor Systems](http://doc.akka.io/docs/akka/snapshot/scala/testing.html)
 
+Akka comes with a dedicated module `akka-testkit` for supporting tests at different levels, which fall into two clearly distinct categories.
 
+- Testing isolated pieces of code without involving the actor model, meaning without multiple threads. This implies
+completely deterministic behavior concerning the ordering of events are no currency concerns.
+- Testing (multiple) encapsulated actors including multi-threaded scheduling. This implies non-deterministic order of events
+but shielding from concurrency concerns by the actor model.
+
+#### Synchronous Unit Testing with TestActorRef
+
+Testing the business logic inside `Actor` classes can be divided into two parts.
+
+- First, each atomic operations must work in isolation, 
+- then sequences of incoming events must be processed correctly, even in the presence of some possible variability in the ordering of events.
+
+The former is the primary use cases for **single-threaded** unit testing, while the latter can only be verified in integration tests.
+ 
+Normally, the `ActorRef` shields the underlying `Actor` instance from the outside, 
+the only communications channel is the actor's mailbox. This restriction is an impediment to
+ unit testing, which led to the inception of the `TestActorRef`. This special type of reference is designed 
+ specifically for testing purposes and allows access to the actor in two ways. either
+ by obtaining a reference to the underlying actor instance, or by invoking or querying the 
+ actor's behavior `receive`. 
+
+When the dispatcher invokes the processing behavior of an actor on a message. 
+it actually calls `apply` on the current behavior registered for the actor.
+This starts out with the return value of the declared `receive` method, but it may also
+be changed using `become` and `unbecome` in response to external message. 
+All of this contributes of overall actor behavior and it does not lend itself to easy testing 
+on the `Actor` itself. 
+Therefor the `TestActorRef` offers a different mode of operation to complement the `Actor `testing. 
+It supports all operations also valid on normal `ActorRef`. 
+
+> Messages sent to the `TestActorRef` are processed synchronously on the current thread 
+and answers may be sent back as usual. 
+
+This trick is made possible by the `CallingThreadDispatche` described in [Here](http://doc.akka.io/docs/akka/snapshot/scala/testing.html#callingthreaddispatcher) 
+This dispatcher is set implicitly for any actor instantiated into a `TestActorRef`
+
+```scala
+"be processed synchronously when instantiated by TestActorRef" in {
+  val toggle = TestActorRef[Toggle]
+
+  implicit val timeout = Timeout(1 seconds)
+
+  // using ask pattern
+  val future = toggle ? "How are you?"
+  val Success(state: String) = future.value.get
+
+  state should be ("happy")
+}
+```
+
+#### Testing Example Actor 
+
+```scala
+class ToggleSpec extends TestKit(ActorSystem("TestSys")) 
+with ImplicitSender with WordSpecLike with Matchers {
+
+  "Toggle Actor" should {
+    "be happy at first" in {
+      implicit val system = ActorSystem("TestSyste")
+
+      val toggle = system.actorOf(Props[Toggle])
+
+      val p = TestProbe()
+      p.send(toggle, "How are you?")
+      p.expectMsg("happy")
+
+      p.send(toggle, "How are you?")
+      p.expectMsg("sad")
+
+      system.shutdown()
+    }
+
+    "then, actor will be sad" in {
+      // using ImplicitSender, TestKit,
+      val toggle = TestActorRef[Toggle]
+
+      toggle ! "How are you?"
+      expectMsg("happy")
+      toggle ! "How are you?"
+      expectMsg("sad")
+    }
+  }
+}
+
+class Toggle extends Actor {
+  def happy: Receive = {
+    case "How are you?" =>
+      sender ! "happy"
+      context become sad
+  }
+
+  def sad: Receive = {
+    case "How are you?" =>
+      sender ! "sad"
+      context become happy
+  }
+
+  def receive = happy
+}
+```
+
+#### Testing Actors with Dependencies
+
+- One simple solution is to add overridable factor method 
+
+```scala
+def Receptionist extends Actor {
+  def controllerProps: Props = Props[Controller]
+  ...
+  
+  def receive = {
+    ...
+    
+    val controller = context.actorOf(controllerProps, "controller")
+  }
+}
+```
 
 
 ### Summary
