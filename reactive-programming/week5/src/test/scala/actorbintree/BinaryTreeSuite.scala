@@ -3,6 +3,9 @@
  */
 package actorbintree
 
+import actorbintree.BinaryTreeSet.{ContainsResult, Contains}
+import actorbintree.BinaryTreeSet
+import actorbintree.BinaryTreeSet.{Contains, Insert, ContainsResult}
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import org.scalatest._
 import akka.testkit.{ TestProbe, ImplicitSender, TestKit }
@@ -14,11 +17,35 @@ with FunSuiteLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   def this() = this(ActorSystem("BinaryTreeSuite"))
   var tree: ActorRef = _
-  val req1 = 1
-  val req2 = 2
-  val req3 = 3
-  val req4 = 4
-  val req5 = 5
+
+  var requestId = 0
+  def genRequestId: Int = {
+    requestId += 1
+    requestId
+  }
+
+  def verifyContainsFalse(tree: ActorRef, sender: ActorRef, elem: Int): Unit =
+    verifyContains(tree, sender, elem, false)
+
+  def verifyContainsTrue(tree: ActorRef, sender: ActorRef, elem: Int): Unit =
+    verifyContains(tree, sender, elem, true)
+
+  def verifyContainsFalse(tree: ActorRef, sender: ActorRef, elems: List[Int]): Unit =
+    verifyContains(tree, sender, elems, false)
+
+  def verifyContainsTrue(tree: ActorRef, sender: ActorRef, elems: List[Int]): Unit =
+    verifyContains(tree, sender, elems, true)
+
+  def verifyContains(tree: ActorRef, sender: ActorRef, elem: Int, exist: Boolean): Unit =
+    verifyContains(tree, sender, List(elem), exist)
+
+  def verifyContains(tree: ActorRef, sender: ActorRef, elems: List[Int], exist: Boolean): Unit = {
+    (0 until elems.length) foreach { index =>
+      var reqId = genRequestId
+      tree ! Contains(sender, reqId, elems(index))
+      expectMsg(ContainsResult(reqId, exist))
+    }
+  }
 
   override def afterAll: Unit = system.shutdown()
   before {
@@ -52,52 +79,92 @@ with FunSuiteLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
   }
 
   test("Contains test") {
-    tree ! Contains(testActor, req1, 1)
-    expectMsg(ContainsResult(req1, false))
-
-    tree ! Contains(testActor, req2, 0)
-    expectMsg(ContainsResult(req2, false))
+    verifyContainsFalse(tree, testActor, 1)
+    verifyContainsFalse(tree, testActor, 0)
   }
 
-  test("Insert test") {
-    tree ! Insert(testActor, req1, 1)
-    expectMsg(OperationFinished(req1))
+  test("insert test") {
+    verifyContainsFalse(tree, testActor, 0)
 
-    tree ! Contains(testActor, req2, 1)
-    expectMsg(ContainsResult(req2, true))
+    var reqId = genRequestId
+    tree ! Insert(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
 
-    tree ! Contains(testActor, req3, 2)
-    expectMsg(ContainsResult(req3, false))
+    verifyContainsTrue(tree, testActor, 0)
+    verifyContainsFalse(tree, testActor, 1)
   }
 
-  test("remove test") {
-    tree ! Remove(testActor, req1, 0)
-    expectMsg(OperationFinished(req1))
+  test("insert duplicated element test") {
+    var reqId = genRequestId
+    tree ! Insert(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
 
-    tree ! Insert(testActor, req2, 0)
-    expectMsg(OperationFinished(req2))
+    reqId = genRequestId
+    tree ! Insert(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
 
-    tree ! Contains(testActor, req3, 0)
-    expectMsg(ContainsResult(req3, true))
+    verifyContainsTrue(tree, testActor, 0)
 
-    tree ! Remove(testActor, req4, 0)
-    expectMsg(OperationFinished(req4))
+    reqId = genRequestId
+    tree ! Insert(testActor, reqId, 1)
+    expectMsg(OperationFinished(reqId))
 
-    tree ! Contains(testActor, req5, 0)
-    expectMsg(ContainsResult(req5, false))
+    verifyContainsTrue(tree, testActor, 1)
+
+    reqId = genRequestId
+    tree ! Insert(testActor, reqId, 1)
+    expectMsg(OperationFinished(reqId))
+
+    verifyContainsTrue(tree, testActor, 1)
+  }
+
+  test("remove root test") {
+    var reqId = genRequestId
+    tree ! Remove(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
+
+    verifyContainsFalse(tree, testActor, 0)
+  }
+
+  test("remove single node test 1") {
+    var reqId = genRequestId
+    tree ! Insert(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
+
+    verifyContainsTrue(tree, testActor, 0)
+
+    reqId = genRequestId
+    tree ! Remove(testActor, reqId, 0)
+    expectMsg(OperationFinished(reqId))
+
+    verifyContainsFalse(tree, testActor, 0)
+  }
+
+  test("remove single node test 2") {
+    var reqId = genRequestId
+    tree ! Insert(testActor, reqId, 1)
+    expectMsg(OperationFinished(reqId))
+
+    reqId = genRequestId
+    tree ! Remove(testActor, reqId, 1)
+    expectMsg(OperationFinished(reqId))
+
+    verifyContainsFalse(tree, testActor, 1)
   }
 
   test("proper inserts and lookups") {
-    val tree = system.actorOf(Props[BinaryTreeSet])
+    var reqId1 = genRequestId
+    tree ! Contains(testActor, id = reqId1, 1)
+    expectMsg(ContainsResult(reqId1, false))
 
-    tree ! Contains(testActor, id = 1, 1)
-    expectMsg(ContainsResult(1, false))
+    var reqId2 = genRequestId
+    tree ! Insert(testActor, id = reqId2, 1)
 
-    tree ! Insert(testActor, id = 2, 1)
-    tree ! Contains(testActor, id = 3, 1)
+    var reqId3 = genRequestId
+    tree ! Contains(testActor, id = reqId3, 1)
 
-    expectMsg(OperationFinished(2))
-    expectMsg(ContainsResult(3, true))
+    expectMsg(OperationFinished(reqId2))
+    expectMsg(ContainsResult(reqId3, true))
   }
 
   test("instruction example") {
@@ -168,3 +235,4 @@ with FunSuiteLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
     receiveN(requester, ops, expectedReplies)
   }
 }
+
