@@ -23,8 +23,12 @@ by Martin Odersky
 [Week1](https://github.com/1ambda/scala/tree/master/reactive-programming/week1) - Monad  
 [Week2](https://github.com/1ambda/scala/tree/master/reactive-programming/week2) - Functional Reactive Programming  
 [Week3](https://github.com/1ambda/scala/tree/master/reactive-programming/week3) - Future, Promise, Async, Await  
-[Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable   
-[Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor  
+[Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable, Subscription  
+[Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor: Crawler, Actor Binary Tree  
+
+### Learning FP
+
+- [Note](https://github.com/1ambda/scala/tree/master/learning-functional-programming)  
 
 ### scala playground
 
