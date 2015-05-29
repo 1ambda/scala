@@ -10,7 +10,7 @@
 
 Resilience demands containment and delegation of failure
 
-- failed Actor is terminated or restarted 
+- failed Actor is terminated or restarted
 - decision must be taken by one other Actor
 - supervised Actors form a tree structure
 - the supervisor need to create its subordinate
@@ -25,8 +25,8 @@ class Manager extends Actor {
     case _: DBException          => Restart
     case _: ActorKilledException => Stop
     case _: ServiceDownException => Escalate
-  } 
- 
+  }
+
   ...
   ...
   // children
@@ -40,19 +40,19 @@ Failure is sent and processed like a message
 ```scala
 Class Manager extends Actor {
   var restarts = Map.empty[ActorRef, Int].withDefaultValue(0)
-  
+
   override val = supervisorStrategy = OneForOneStrategy() {
-    case _: DBException => 
+    case _: DBException =>
       restarts(sender) match {
         case toomany if toomany > 10 => restarts -= sender; Stop
-        case n                       => restarts.updated(sender, n+1); Restart 
+        case n                       => restarts.updated(sender, n+1); Restart
       }
   }
 }
 ```
 
-If decision applies to all children, 
-We can use `AllForOneStrategy` that allow a finite number of restarts. 
+If decision applies to all children,
+We can use `AllForOneStrategy` that allow a finite number of restarts.
 (also within a time window)
 
 ```scala
@@ -70,41 +70,33 @@ OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1.minute) {
 
 ![](http://doc.akka.io/docs/akka/snapshot/_images/ActorPath.png)
 
-> An actor reference is a subtype of `ActorRef`, whose foremost purpose is to support sending 
-messages to the actor it represents. Each actor has access to its canonical (local) reference 
+> An actor reference is a subtype of `ActorRef`, whose foremost purpose is to support sending
+messages to the actor it represents. Each actor has access to its canonical (local) reference
 through the `self` field.
 
 > This reference is also included as sender reference by default for all messages sent to other actors.  
-Conversely, during message processing the actor has access to a reference representing the sender of the current 
+Conversely, during message processing the actor has access to a reference representing the sender of the current
 message through the `sender` method.
 
 ![](http://doc.akka.io/docs/akka/current/_images/actor_lifecycle1.png)
 
-If an actor is stopped and a new one with the same name is created, 
-an `ActorRef` of old incarnation will not point to the new one. 
+If an actor is stopped and a new one with the same name is created,
+an `ActorRef` of old incarnation will not point to the new one.
 Since an `ActorRef` always represent an incarnation (path and UID) not just a given path.
 
 ### Actor Life Cycle
 
-
-![]()
+![](https://raw.githubusercontent.com/1ambda/scala/master/reactive-programming/week6/screenshots/actor_life_cycle.png)
 
 ```scala
 trait Actor {
   def preStart(): Unit = {}
-  
+
   def preRestart(reason: Throwable, message: Option[Any]: Unit = {
     context.children foreach (context.stop(_))
-    postStop() // stop the previous actor instance 
+    postStop() // stop the previous actor instance
   }
-  
+
   def postRestart(
 }
 ```
-
-
-
-
-
-
-
