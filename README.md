@@ -25,30 +25,38 @@ by Martin Odersky
 [Week3](https://github.com/1ambda/scala/tree/master/reactive-programming/week3) - Future, Promise, Async, Await  
 [Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable, Subscription  
 [Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor: Crawler, Actor Binary Tree  
+[Week6](https://github.com/1ambda/scala/tree/master/reactive-programming/week6) - Error Kernel, Event Stream, Akka Persistent   
 
 ### Learning FP
 
 - [Note](https://github.com/1ambda/scala/tree/master/learning-functional-programming)  
 
-### scala playground
+### Basics
 
-#### basics
+- [Implicit](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/Implicit)
+- [Either](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/either)
+- [F bounded, Subtype, Ad-hoc Polymorphism](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/polymorphism)
+- Async
 
-- either
-- async
+### Scalaz
 
-#### scalaz
+- Monoid
+- Io
+- [Functor](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/functor)
+- [Applicative](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/applicative)
+- [Either, Disjunction, Validation](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/disjunction)
+- [State Monad](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/state)
 
-- monoid
-- functor
-- applicative
-- io
+### Akka
 
-#### dispatch
+- [Note](https://github.com/1ambda/scala/tree/master/playground/src/main/scala/Akka)
 
-#### slick
+### RxScala 
 
-#### akka
+- [Thread Experiment](https://github.com/1ambda/scala/tree/master/playground/src/main/scala/Rx)
+- [Hot and Cold Observable](https://github.com/1ambda/scala/blob/master/playground/src/main/scala/Rx/Observable.md)
 
-#### RxScala
+### Dispatch
+
+### Slick
 
