@@ -1,0 +1,5 @@
+package rx
+
+class ObservableSpec {
+
+}
