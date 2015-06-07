@@ -1,27 +1,20 @@
 package kvstore
 
-import akka.testkit.TestKit
 import akka.actor.ActorSystem
-import org.scalatest.FunSuiteLike
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.Matchers
-import akka.testkit.ImplicitSender
-import akka.testkit.TestProbe
-import scala.concurrent.duration._
-import kvstore.Persistence.{ Persisted, Persist }
-import kvstore.Replica.OperationFailed
-import kvstore.Replicator.{ Snapshot }
-import scala.util.Random
-import scala.util.control.NonFatal
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalactic.ConversionCheckedTripleEquals
+import org.scalatest.{BeforeAndAfterAll, FunSuiteLike, Matchers}
+
+// Implement the primary replica role so that it correctly responds to
+// the KV protocol messages without considering persistence or replication.
 
 class Step1_PrimarySpec extends TestKit(ActorSystem("Step1PrimarySpec"))
-    with FunSuiteLike
-        with BeforeAndAfterAll
-    with Matchers
-    with ConversionCheckedTripleEquals
-    with ImplicitSender
-    with Tools {
+with FunSuiteLike
+with BeforeAndAfterAll
+with Matchers
+with ConversionCheckedTripleEquals
+with ImplicitSender
+with Tools {
 
   override def afterAll(): Unit = {
     system.shutdown()
@@ -31,15 +24,15 @@ class Step1_PrimarySpec extends TestKit(ActorSystem("Step1PrimarySpec"))
 
   test("case1: Primary (in isolation) should properly register itself to the provided Arbiter") {
     val arbiter = TestProbe()
-        system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case1-primary")
+    system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case1-primary")
     
     arbiter.expectMsg(Join)
   }
 
   test("case2: Primary (in isolation) should react properly to Insert, Remove, Get") {
     val arbiter = TestProbe()
-        val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case2-primary")
-        val client = session(primary)
+    val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case2-primary")
+    val client = session(primary)
 
     arbiter.expectMsg(Join)
     arbiter.send(primary, JoinedPrimary)

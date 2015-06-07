@@ -1,5 +1,6 @@
 package kvstore
 
+import akka.actor.FSM.->
 import akka.actor.{ OneForOneStrategy, Props, ActorRef, Actor }
 import kvstore.Arbiter._
 import scala.collection.immutable.Queue
@@ -18,13 +19,17 @@ object Replica {
     def key: String
     def id: Long
   }
+
+  /* for primary replica */
   case class Insert(key: String, value: String, id: Long) extends Operation
   case class Remove(key: String, id: Long) extends Operation
-  case class Get(key: String, id: Long) extends Operation
 
   sealed trait OperationReply
   case class OperationAck(id: Long) extends OperationReply
   case class OperationFailed(id: Long) extends OperationReply
+
+  /* for secondary replica */
+  case class Get(key: String, id: Long) extends Operation
   case class GetResult(key: String, valueOption: Option[String], id: Long) extends OperationReply
 
   def props(arbiter: ActorRef, persistenceProps: Props): Props = Props(new Replica(arbiter, persistenceProps))
@@ -36,31 +41,86 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
   import Persistence._
   import context.dispatcher
 
-  /*
-   * The contents of this actor is just a suggestion, you can implement it in any way you like.
-   */
-  
   var kv = Map.empty[String, String]
-  // a map from secondary replicas to replicators
-  var secondaries = Map.empty[ActorRef, ActorRef]
-  // the current set of replicators
-  var replicators = Set.empty[ActorRef]
+  var secondaries = Map.empty[ActorRef, ActorRef] /* a map from secondary replicas to replicators */
+  var replicators = Set.empty[ActorRef] /* the current set of replicators */
 
+  arbiter ! Join /* send `Join` to the arbiter */
+
+  val persistence = /* create persistence actor and watch it */
+    context.system.actorOf(persistenceProps)
+
+  override val supervisorStrategy = OneForOneStrategy() {
+    case _ =>
+      println("Persistence Actor will be restarted")
+      Restart
+  }
+
+  // TODO: watch, apply strategy
 
   def receive = {
-    case JoinedPrimary   => context.become(leader)
-    case JoinedSecondary => context.become(replica)
+    case JoinedPrimary   => context.become(primary)
+    case JoinedSecondary => context.become(secondary)
   }
 
-  /* TODO Behavior for  the leader role. */
-  val leader: Receive = {
-    case _ =>
+  /* Behavior for the primary replica role. */
+
+  val primary: Receive = {
+    case Get(key, id) =>
+      sender ! GetResult(key, kv.get(key), id)
+
+    case Insert(key, value, id) =>
+      kv += (key -> value)
+      sender ! OperationAck(id)
+
+    case Remove(key, id) =>
+      kv -= key
+      sender ! OperationAck(id)
   }
 
-  /* TODO Behavior for the replica role. */
-  val replica: Receive = {
-    case _ =>
+  override def postStop() = {
+    cancelTokenForRetry.cancel()
   }
 
+  /* Behavior for the secondary replica role. */
+  var expectedSeq = 0L
+  var secondaryAcks = Map.empty[Long /* seq */, SnapshotJob]
+  case class SnapshotJob(replicator: ActorRef, snapshot: Snapshot)
+  case class Retry()
+
+  val cancelTokenForRetry =
+    context.system.scheduler.schedule(100 millis, 100 millis, self, Retry)
+
+  val secondary: Receive = {
+    case Get(key, id) => sender ! GetResult(key, kv.get(key), id)
+
+    case Snapshot(key, optValue, seq) if seq > expectedSeq =>  /* ignore */
+
+    case Snapshot(key, optValue, seq) if seq < expectedSeq =>
+      sender ! SnapshotAck(key, seq)
+
+    case Snapshot(key, optValue, seq) => { /* expectedSeq == seq */
+      secondaryAcks += seq -> SnapshotJob(sender, Snapshot(key, optValue, seq))
+      expectedSeq += 1
+
+      optValue match {
+        case Some(value) => kv += key -> value /* insert */
+        case None        => kv -= key          /* remove */
+      }
+
+      persistence ! Persist(key, optValue, seq)
+    }
+
+    case Persisted(key, seq) => if (secondaryAcks.isDefinedAt(seq)) {
+      val SnapshotJob(replicator, Snapshot(_, optValue, _)) = secondaryAcks(seq)
+
+      secondaryAcks -= seq
+      replicator ! SnapshotAck(key, seq)
+    }
+
+    case Retry => secondaryAcks map { case(seq, SnapshotJob(_, Snapshot(key, optValue, _))) =>
+      persistence ! Persist(key, optValue, seq)
+    }
+  }
 }
 

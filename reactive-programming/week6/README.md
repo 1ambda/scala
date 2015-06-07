@@ -3,7 +3,7 @@
 
 ## Assignment: Distributed Key-Value Store
 
-[Requirements]()
+[Requirements](https://github.com/1ambda/scala/blob/master/reactive-programming/week6/Distributed_KV_Store_Requirement.md)
 
 ## Lecture
 

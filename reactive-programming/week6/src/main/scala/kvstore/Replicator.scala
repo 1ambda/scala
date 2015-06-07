@@ -1,16 +1,31 @@
 package kvstore
 
+import akka.actor.FSM.->
 import akka.actor.Props
 import akka.actor.Actor
 import akka.actor.ActorRef
+import org.scalatest.time.Milliseconds
 import scala.concurrent.duration._
 
 object Replicator {
+
+  /* client <-> primary <-> replicator <-> secondary <-> persistence
+                        <-> replicator <-> secondary <-> persistence
+                        <-> replicator <-> secondary <-> persistence
+                        <-> replicator <-> secondary <-> persistence
+
+                primary can has multiple replicators
+   */
+
   case class Replicate(key: String, valueOption: Option[String], id: Long)
   case class Replicated(key: String, id: Long)
-  
+
   case class Snapshot(key: String, valueOption: Option[String], seq: Long)
   case class SnapshotAck(key: String, seq: Long)
+
+  case class Retry()
+  case class Batch()
+  case class BatchJob(client: ActorRef, replicate: Replicate)
 
   def props(replica: ActorRef): Props = Props(new Replicator(replica))
 }
@@ -19,27 +34,60 @@ class Replicator(val replica: ActorRef) extends Actor {
   import Replicator._
   import Replica._
   import context.dispatcher
-  
-  /*
-   * The contents of this actor is just a suggestion, you can implement it in any way you like.
-   */
 
-  // map from sequence number to pair of sender and request
-  var acks = Map.empty[Long, (ActorRef, Replicate)]
-  // a sequence of not-yet-sent snapshots (you can disregard this if not implementing batching)
-  var pending = Vector.empty[Snapshot]
-  
-  var _seqCounter = 0L
+  var acks = Map.empty[Long, BatchJob] /* map from sequence number to pair of sender and request */
+  var pending = Map.empty[String /* key */, BatchJob] /* a sequence of not-yet-sent snapshots */
+
+  var _seqCounter:Long = 0L
+
   def nextSeq = {
     val ret = _seqCounter
     _seqCounter += 1
     ret
   }
 
-  
-  /* TODO Behavior for the Replicator. */
+  val cancelTokenForResend =
+    context.system.scheduler.schedule(200 millis, 200 milli, self, Retry)
+  val cancelTokenForBatch =
+    context.system.scheduler.schedule(100 millis, 100 millis, self, Batch)
+
+  /* Behavior for the Replicator. */
   def receive: Receive = {
-    case _ =>
+    case Replicate(key, optValue, id) =>
+      if (!pending.isDefinedAt(key) || pending(key).replicate.id < id)
+        pending += key -> BatchJob(sender, Replicate(key, optValue, id))
+
+    case Batch =>{
+      pending.map {
+      case (key, BatchJob(primary, Replicate(_, optValue, id))) =>
+        val seq = _seqCounter
+        nextSeq
+
+        val snapshot = Snapshot(key, optValue, seq)
+
+        acks += seq -> BatchJob(primary, Replicate(key, optValue, id))
+        replica ! snapshot
+      }
+
+      pending = Map.empty
+    }
+
+    case SnapshotAck(key, seq) => if (acks.isDefinedAt(seq)) {
+      val BatchJob(primary, Replicate(_, _, id)) = acks(seq)
+
+      acks -= seq
+
+      primary ! Replicated(key, id)
+    }
+
+    case Retry => acks map { case(seq, BatchJob(_, Replicate(key, optValue, _))) =>
+        replica ! Snapshot(key, optValue, seq)
+    }
   }
 
+
+  override def postStop() = {
+    cancelTokenForBatch.cancel()
+    cancelTokenForResend.cancel()
+  }
 }

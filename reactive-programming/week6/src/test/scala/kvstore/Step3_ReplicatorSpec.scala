@@ -12,12 +12,12 @@ import kvstore.Replicator.{ SnapshotAck, Snapshot, Replicate }
 import org.scalactic.ConversionCheckedTripleEquals
 
 class Step3_ReplicatorSpec extends TestKit(ActorSystem("Step3ReplicatorSpec"))
-    with FunSuiteLike
-        with BeforeAndAfterAll
-    with Matchers
-    with ConversionCheckedTripleEquals
-    with ImplicitSender
-    with Tools {
+with FunSuiteLike
+with BeforeAndAfterAll
+with Matchers
+with ConversionCheckedTripleEquals
+with ImplicitSender
+with Tools {
 
   override def afterAll(): Unit = {
     system.shutdown()

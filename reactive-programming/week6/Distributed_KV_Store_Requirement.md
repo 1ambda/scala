@@ -1,5 +1,241 @@
 # Week 6 Assignment
 
+## Implementation
+
+### Step 5
+
+Implement the use of persistence and replication at the primary replica.
+
+```scala
+```
+
+### Step 4
+
+Implement the use of persistence at the secondary replicas.
+
+```scala
+class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
+  ...
+  ...
+  
+  val persistence = /* create persistence actor and watch it */
+    context.system.actorOf(persistenceProps)
+
+  override val supervisorStrategy = OneForOneStrategy() {
+    case _ => Restart
+  }
+  
+  ...
+  
+  /* Behavior for the secondary replica role. */
+  var expectedSeq = 0L
+  var acks = Map.empty[Long /* seq */, SnapshotJob]
+  case class SnapshotJob(replicator: ActorRef, snapshot: Snapshot)
+  case class Retry()
+
+  context.system.scheduler.schedule(100 millis, 100 millis, self, Retry)
+
+  val secondary: Receive = {
+    case Get(key, id) => sender ! GetResult(key, kv.get(key), id)
+
+    case Snapshot(key, optValue, seq) if seq > expectedSeq =>  /* ignore */
+
+    case Snapshot(key, optValue, seq) if seq < expectedSeq =>
+      sender ! SnapshotAck(key, seq)
+
+    case Snapshot(key, optValue, seq) => { /* expectedSeq == seq */
+      acks += seq -> SnapshotJob(sender, Snapshot(key, optValue, seq))
+      expectedSeq += 1
+
+      optValue match {
+        case Some(value) => kv += key -> value /* insert */
+        case None        => kv -= key          /* remove */
+      }
+
+      persistence ! Persist(key, optValue, seq)
+    }
+
+    case Persisted(key, seq) => if (acks.isDefinedAt(seq)) {
+      val SnapshotJob(replicator, Snapshot(_, optValue, _)) = acks(seq)
+
+      acks -= seq
+      replicator ! SnapshotAck(key, seq)
+    }
+
+    case Retry => acks map { case(seq, SnapshotJob(_, Snapshot(key, optValue, _))) =>
+      persistence ! Persist(key, optValue, seq)
+    }
+
+    case Terminated => /* TODO */
+  }
+}
+```
+
+### Step 3
+
+Implement the replicator so that it correctly mediates between replication requests, 
+snapshots and acknowledgements.
+
+```scala
+object Replicator {
+  ...
+  ...
+  
+  case class Resend()
+  case class Batch()
+  case class BatchJob(client: ActorRef, replicate: Replicate)
+  
+  ...
+}
+  
+class Replicator(val replica: ActorRef) extends Actor {
+  import Replicator._
+  import Replica._
+  import context.dispatcher
+
+  // map from sequence number to pair of sender and request
+  var acks = Map.empty[Long, BatchJob]
+  // a sequence of not-yet-sent snapshots (you can disregard this if not implementing batching)
+  var pending = Map.empty[String /* key */, BatchJob]
+
+
+
+  var _seqCounter:Long = 0L
+
+  def nextSeq = {
+    val ret = _seqCounter
+    _seqCounter += 1
+    ret
+  }
+
+  val cancelTokenForResend =
+    context.system.scheduler.schedule(200 millis, 200 milli, self, Resend)
+  val cancelTokenForBatch =
+    context.system.scheduler.schedule(100 millis, 100 millis, self, Batch)
+
+  /* Behavior for the Replicator. */
+  def receive: Receive = {
+    case Replicate(key, optValue, id) =>
+      if (!pending.isDefinedAt(key) || pending(key).replicate.id < id)
+        pending += key -> BatchJob(sender, Replicate(key, optValue, id))
+
+    case Batch =>{
+      pending.map {
+      case (key, BatchJob(primary, Replicate(_, optValue, id))) =>
+        val seq = _seqCounter
+        nextSeq
+
+        val snapshot = Snapshot(key, optValue, seq)
+
+        acks += seq -> BatchJob(primary, Replicate(key, optValue, id))
+        replica ! snapshot
+      }
+
+      pending = Map.empty
+    }
+
+    case SnapshotAck(key, seq) => if (acks.isDefinedAt(seq)) {
+      val BatchJob(primary, Replicate(_, _, id)) = acks(seq)
+
+      acks -= seq
+
+      primary ! Replicated(key, id)
+    }
+
+    case Resend => acks map { case(seq, BatchJob(_, Replicate(key, optValue, _))) =>
+        replica ! Snapshot(key, optValue, seq)
+    }
+  }
+
+
+  override def postStop() = {
+    cancelTokenForBatch.cancel()
+    cancelTokenForResend.cancel()
+  }
+}
+```
+
+### Step 2
+
+Implement the secondary replica role so that it correctly responds to 
+the read-only part of the KV protocol and accepts the replication protocol, 
+without considering persistence.
+
+```scala
+  var expectedSeq = 0L
+
+  /* Behavior for the secondary replica role. */
+  val secondary: Receive = {
+    case Get(key, id) =>
+      sender ! GetResult(key, kv.get(key), id)
+
+    case Snapshot(key, valueOption, seq) => valueOption match {
+        case _ if seq < expectedSeq =>
+          sender ! SnapshotAck(key, seq)
+
+        case _ if seq > expectedSeq =>
+          /* ignore */
+
+        case Some(value) => /* Insert */
+          kv += (key -> value)
+          expectedSeq += 1
+          sender ! SnapshotAck(key, seq)
+
+        case None => /* Remove */
+          kv -= key
+          expectedSeq += 1
+          sender ! SnapshotAck(key, seq)
+      }
+  }
+```
+
+### Step 1
+
+Implement the primary replica role so that it correctly responds to 
+the KV protocol messages without considering persistence or replication.
+
+```scala
+class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
+  import Replica._
+  import Replicator._
+  import Persistence._
+  import context.dispatcher
+
+  var kv = Map.empty[String, String]
+  // a map from secondary replicas to replicators
+  var secondaries = Map.empty[ActorRef, ActorRef]
+  // the current set of replicators
+  var replicators = Set.empty[ActorRef]
+
+  /* send `Join` to the arbiter */
+  arbiter ! Join
+
+  def receive = {
+    case JoinedPrimary   => context.become(leader)
+    case JoinedSecondary => context.become(replica)
+  }
+
+  /* TODO Behavior for  the leader role. */
+  val leader: Receive = {
+    case Get(key, id) =>
+      sender ! GetResult(key, kv.get(key), id)
+
+    case Insert(key, value, id) =>
+      kv += (key -> value)
+      sender ! OperationAck(id)
+
+    case Remove(key, id) =>
+      kv -= key
+      sender ! OperationAck(id)
+  }
+
+  /* TODO Behavior for the replica role. */
+  val replica: Receive = {
+    case _ =>
+  }
+}
+```
+
 ## Requirement
  
 ### Lookup 
