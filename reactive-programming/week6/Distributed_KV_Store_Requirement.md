@@ -2,11 +2,111 @@
 
 ## Implementation
 
+### Step 6
+
+Implement the sending of the initial state replication to newly joined replicas.
+
+```scala
+```
+
 ### Step 5
 
 Implement the use of persistence and replication at the primary replica.
 
 ```scala
+// in Replica.scala
+
+  def checkOperationFinishied(id: Long): Boolean =
+    if (primaryGlobalAcks.isDefinedAt(id) || primaryPersistAcks.isDefinedAt(id)) false
+    else true
+
+  /* send Persist to persistence for this primary */
+  def startPersist(key: String, optValue: Option[String], id: Long) = {
+    val persist = Persist(key, optValue, id)
+    primaryPersistAcks += id -> OperationJob(sender, persist) /* add not received ack queue */
+    persistence ! persist
+    context.system.scheduler.scheduleOnce(1 second, self, PersistAckTimeout(sender, id))
+  }
+
+  /* send Replicate to replicators for the secondaries */
+  def startReplicate(key: String, optValue: Option[String], id: Long) = if (!replicators.isEmpty) {
+    primaryGlobalAcks += id -> ReplicationJob(sender, replicators)
+    replicators foreach { r => r ! Replicate(key, optValue, id) }
+    context.system.scheduler.scheduleOnce(1 second, self, GlobalReplicateAckTimeout(sender, id))
+  }
+
+  def respondFailure(client: ActorRef, id: Long) = {
+    primaryPersistAcks -= id
+    primaryGlobalAcks -= id
+    client ! OperationFailed(id)
+  }
+
+  var primaryPersistAcks = Map.empty[Long /* id */, OperationJob]
+  var primaryGlobalAcks  = Map.empty[Long /* id */, ReplicationJob]
+
+  case class OperationJob(client: ActorRef, persist: Persist)
+  case class ReplicationJob(client: ActorRef, rs: Set[ActorRef] /* replicators */)
+  case class PersistAckTimeout(client: ActorRef, id: Long)
+  case class GlobalReplicateAckTimeout(client: ActorRef, id: Long)
+
+  implicit val timeout = Timeout(1 second)
+
+  val primary: Receive = {
+    case Get(key, id) =>
+      sender ! GetResult(key, kv.get(key), id)
+
+    case Insert(key, value, id) =>
+      kv += (key -> value) /* add to in-memory cache */
+
+      startPersist(key, Some(value), id)
+      startReplicate(key, Some(value), id)
+
+    case Remove(key, id) =>
+      kv -= key /* remove from in-memory cache */
+
+      startPersist(key, None, id)
+      startReplicate(key, None, id)
+
+    case Persisted(key, id) => if (primaryPersistAcks.isDefinedAt(id)) {
+      val OperationJob(client, persist) = primaryPersistAcks(id)
+      primaryPersistAcks -= id
+
+      if (checkOperationFinishied(id)) client ! OperationAck(id)
+    }
+
+    case Replicated(key, id) => if (primaryGlobalAcks.isDefinedAt(id)) {
+      val ReplicationJob(client, rs) = primaryGlobalAcks(id) /* replicators that are responsible for that operation id */
+      val remainingRs = rs - sender
+
+      if (remainingRs.isEmpty) primaryGlobalAcks -= id
+      else primaryGlobalAcks += id -> ReplicationJob(client, remainingRs)
+
+      if (checkOperationFinishied(id)) client ! OperationAck(id)
+    }
+
+    case PersistAckTimeout(client, id) => respondFailure(client, id)
+    case GlobalReplicateAckTimeout(client, id) => respondFailure(client, id)
+
+    case Retry => primaryPersistAcks map { case (id, OperationJob(_, persist)) => {
+      persistence ! persist
+    }}
+
+    case Replicas(nodes: Set[ActorRef]) => {
+      val newSecondaries = nodes - self
+      val removed        = secondaries.keySet -- newSecondaries
+      val newlyJoined    = newSecondaries -- secondaries.keySet
+
+      /* terminate replicators corresponding removed secondaries */
+      removed foreach { s => context.stop(secondaries(s)) }
+
+      /* add new replicators corresponding newly joined secondaries */
+      newlyJoined foreach { s => {
+        val r = context.system.actorOf(Replicator.props(s)) /* new replicator */
+        secondaries += s -> r
+        replicators += r
+      }}
+    }
+  }
 ```
 
 ### Step 4

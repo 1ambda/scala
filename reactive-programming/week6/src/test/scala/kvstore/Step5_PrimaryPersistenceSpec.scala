@@ -14,12 +14,12 @@ import Replicator._
 import org.scalactic.ConversionCheckedTripleEquals
 
 class Step5_PrimaryPersistenceSpec extends TestKit(ActorSystem("Step5PrimaryPersistenceSpec"))
-    with FunSuiteLike
-        with BeforeAndAfterAll
-    with Matchers
-    with ConversionCheckedTripleEquals
-    with ImplicitSender
-    with Tools {
+with FunSuiteLike
+with BeforeAndAfterAll
+with Matchers
+with ConversionCheckedTripleEquals
+with ImplicitSender
+with Tools {
 
   override def afterAll(): Unit = {
     system.shutdown()
@@ -75,7 +75,7 @@ class Step5_PrimaryPersistenceSpec extends TestKit(ActorSystem("Step5PrimaryPers
     arbiter.expectMsg(Join)
     arbiter.send(primary, JoinedPrimary)
 
-    val setId = client.set("foo", "bar")
+    val setId = client.set("foo3", "bar3")
     persistence.expectMsgType[Persist]
     client.nothingHappens(800.milliseconds) // Should not fail too early
     client.waitFailed(setId)
@@ -84,8 +84,8 @@ class Step5_PrimaryPersistenceSpec extends TestKit(ActorSystem("Step5PrimaryPers
   test("case4: Primary generates failure after 1 second if global acknowledgement fails") {
     val arbiter = TestProbe()
     val persistence = TestProbe()
-        val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case4-primary")
-        val secondary = TestProbe()
+    val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case4-primary")
+    val secondary = TestProbe()
     val client = session(primary)
 
     arbiter.expectMsg(Join)
@@ -102,8 +102,8 @@ class Step5_PrimaryPersistenceSpec extends TestKit(ActorSystem("Step5PrimaryPers
   test("case5: Primary acknowledges only after persistence and global acknowledgement") {
     val arbiter = TestProbe()
     val persistence = TestProbe()
-        val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case5-primary")
-        val secondaryA, secondaryB = TestProbe()
+    val primary = system.actorOf(Replica.props(arbiter.ref, Persistence.props(flaky = false)), "case5-primary")
+    val secondaryA, secondaryB = TestProbe()
     val client = session(primary)
 
     arbiter.expectMsg(Join)
