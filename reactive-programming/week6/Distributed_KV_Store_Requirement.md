@@ -6,6 +6,8 @@
 
 Implement the sending of the initial state replication to newly joined replicas.
 
+> notice that at creation time of the Replicator, the primary must forward update events for every key-value pair it currently holds to the Replicator.
+
 ```scala
 ```
 

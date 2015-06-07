@@ -66,9 +66,23 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
 
   /* Behavior for the primary replica role. */
 
-  def checkOperationFinishied(id: Long): Boolean =
+  def handleOperation(key: String, optValue: Option[String]) = optValue match {
+    case Some(value) => kv += key -> value
+    case None        => kv -= key
+  }
+
+  def checkOperationFinished(replicate: Replicate): Boolean =
+    checkOperationFinished(replicate.key, replicate.valueOption, replicate.id)
+
+  def checkOperationFinished(persist: Persist): Boolean =
+    checkOperationFinished(persist.key, persist.valueOption, persist.id)
+
+  def checkOperationFinished(key: String, optValue: Option[String], id: Long): Boolean =
     if (primaryGlobalAcks.isDefinedAt(id) || primaryPersistAcks.isDefinedAt(id)) false
-    else true
+    else {
+      handleOperation(key, optValue)
+      true
+    }
 
   /* send Persist to persistence for this primary */
   def startPersist(key: String, optValue: Option[String], id: Long) = {
@@ -80,22 +94,32 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
 
   /* send Replicate to replicators for the secondaries */
   def startReplicate(key: String, optValue: Option[String], id: Long) = if (!replicators.isEmpty) {
-    primaryGlobalAcks += id -> ReplicationJob(sender, replicators)
-    replicators foreach { r => r ! Replicate(key, optValue, id) }
+    val replicate = Replicate(key, optValue, id)
+    primaryGlobalAcks += id -> ReplicationJob(sender, replicators, replicate)
+    replicators foreach { r => r ! replicate }
     context.system.scheduler.scheduleOnce(1 second, self, GlobalReplicateAckTimeout(sender, id))
   }
 
-  def respondFailure(client: ActorRef, id: Long) = {
+  def cleanAcks(id: Long) = {
     primaryPersistAcks -= id
     primaryGlobalAcks -= id
+  }
+
+  def respondFailure(client: ActorRef, id: Long) = {
+    cleanAcks(id)
     client ! OperationFailed(id)
+  }
+
+  def respondSuccess(client: ActorRef, id: Long) = {
+    cleanAcks(id)
+    client ! OperationAck(id)
   }
 
   var primaryPersistAcks = Map.empty[Long /* id */, OperationJob]
   var primaryGlobalAcks  = Map.empty[Long /* id */, ReplicationJob]
 
   case class OperationJob(client: ActorRef, persist: Persist)
-  case class ReplicationJob(client: ActorRef, rs: Set[ActorRef] /* replicators */)
+  case class ReplicationJob(client: ActorRef, rs: Set[ActorRef], replicate: Replicate)
   case class PersistAckTimeout(client: ActorRef, id: Long)
   case class GlobalReplicateAckTimeout(client: ActorRef, id: Long)
 
@@ -106,14 +130,10 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       sender ! GetResult(key, kv.get(key), id)
 
     case Insert(key, value, id) =>
-      kv += (key -> value) /* add to in-memory cache */
-
       startPersist(key, Some(value), id)
       startReplicate(key, Some(value), id)
 
     case Remove(key, id) =>
-      kv -= key /* remove from in-memory cache */
-
       startPersist(key, None, id)
       startReplicate(key, None, id)
 
@@ -121,17 +141,17 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       val OperationJob(client, persist) = primaryPersistAcks(id)
       primaryPersistAcks -= id
 
-      if (checkOperationFinishied(id)) client ! OperationAck(id)
+      if (checkOperationFinished(persist)) respondSuccess(client ,id)
     }
 
     case Replicated(key, id) => if (primaryGlobalAcks.isDefinedAt(id)) {
-      val ReplicationJob(client, rs) = primaryGlobalAcks(id) /* replicators that are responsible for that operation id */
+      val ReplicationJob(client, rs, replicate) = primaryGlobalAcks(id) /* replicators that are responsible for that operation id */
       val remainingRs = rs - sender
 
       if (remainingRs.isEmpty) primaryGlobalAcks -= id
-      else primaryGlobalAcks += id -> ReplicationJob(client, remainingRs)
+      else primaryGlobalAcks += id -> ReplicationJob(client, remainingRs, replicate)
 
-      if (checkOperationFinishied(id)) client ! OperationAck(id)
+      if (checkOperationFinished(replicate)) respondSuccess(client, id)
     }
 
     case PersistAckTimeout(client, id) => respondFailure(client, id)
@@ -146,14 +166,27 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       val removed        = secondaries.keySet -- newSecondaries
       val newlyJoined    = newSecondaries -- secondaries.keySet
 
+      /* remove old replicator from global ack */
+      primaryGlobalAcks = primaryGlobalAcks map { case(id, ReplicationJob(client, rs, replicate)) =>
+        (id -> ReplicationJob(client, rs -- removed, replicate))
+      }
+
       /* terminate replicators corresponding removed secondaries */
-      removed foreach { s => context.stop(secondaries(s)) }
+      removed foreach { s =>
+        val r = secondaries(s)
+        replicators -= r
+        secondaries -= s
+        context.stop(r)
+        context.stop(s)
+      }
 
       /* add new replicators corresponding newly joined secondaries */
       newlyJoined foreach { s => {
         val r = context.system.actorOf(Replicator.props(s)) /* new replicator */
         secondaries += s -> r
         replicators += r
+
+        kv foreach { case (k, v) => r ! Replicate(k, Some(v), -1) }
       }}
     }
   }
