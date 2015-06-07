@@ -214,7 +214,6 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
 
     case Snapshot(key, optValue, seq) => { /* expectedSeq == seq */
       secondaryAcks += seq -> SnapshotJob(sender, Snapshot(key, optValue, seq))
-      expectedSeq += 1
 
       optValue match {
         case Some(value) => kv += key -> value /* insert */
@@ -228,6 +227,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       val SnapshotJob(replicator, Snapshot(_, optValue, _)) = secondaryAcks(seq)
 
       secondaryAcks -= seq
+      expectedSeq += 1
       replicator ! SnapshotAck(key, seq)
     }
 

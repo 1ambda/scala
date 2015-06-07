@@ -25,7 +25,7 @@ by Martin Odersky
 [Week3](https://github.com/1ambda/scala/tree/master/reactive-programming/week3) - Future, Promise, Async, Await  
 [Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable, Subscription  
 [Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor: Crawler, Actor Binary Tree  
-[Week6](https://github.com/1ambda/scala/tree/master/reactive-programming/week6) - Error Kernel, Event Stream, Akka Persistent   
+[Week6](https://github.com/1ambda/scala/tree/master/reactive-programming/week6) - Error Kernel, Event Stream, Persistent and Distributed Key-Value Store  
 
 ### Learning FP
 
