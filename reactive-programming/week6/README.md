@@ -1,4 +1,11 @@
+
 # Week 6
+
+## Assignment: Distributed Key-Value Store
+
+[Requirements]()
+
+## Lecture
 
 [Ref - Reactive Programming in Scala](https://class.coursera.org/reactive-002/)
 
