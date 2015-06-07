@@ -31,7 +31,7 @@ object SynchronizedPool extends App with ThreadUtils {
 
   async { log("Hello") }
   async { log(" world!") }
-  
+
   Thread.sleep(1000)
 }
 
