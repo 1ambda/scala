@@ -57,20 +57,12 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       Restart
   }
 
-  // TODO: watch, apply strategy
-
   def receive = {
     case JoinedPrimary   => context.become(primary)
     case JoinedSecondary => context.become(secondary)
   }
 
   /* Behavior for the primary replica role. */
-
-  def handleOperation(key: String, optValue: Option[String]) = optValue match {
-    case Some(value) => kv += key -> value
-    case None        => kv -= key
-  }
-
   def checkOperationFinished(replicate: Replicate): Boolean =
     checkOperationFinished(replicate.key, replicate.valueOption, replicate.id)
 
@@ -80,7 +72,11 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
   def checkOperationFinished(key: String, optValue: Option[String], id: Long): Boolean =
     if (primaryGlobalAcks.isDefinedAt(id) || primaryPersistAcks.isDefinedAt(id)) false
     else {
-      handleOperation(key, optValue)
+      optValue match {
+        case Some(value) => kv += key -> value
+        case None        => kv -= key
+      }
+
       true
     }
 
@@ -89,7 +85,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
     val persist = Persist(key, optValue, id)
     primaryPersistAcks += id -> OperationJob(sender, persist) /* add not received ack queue */
     persistence ! persist
-    context.system.scheduler.scheduleOnce(1 second, self, PersistAckTimeout(sender, id))
+    context.system.scheduler.scheduleOnce(1 second, self, AckTimeout(sender, id))
   }
 
   /* send Replicate to replicators for the secondaries */
@@ -97,7 +93,6 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
     val replicate = Replicate(key, optValue, id)
     primaryGlobalAcks += id -> ReplicationJob(sender, replicators, replicate)
     replicators foreach { r => r ! replicate }
-    context.system.scheduler.scheduleOnce(1 second, self, GlobalReplicateAckTimeout(sender, id))
   }
 
   def cleanAcks(id: Long) = {
@@ -120,10 +115,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
 
   case class OperationJob(client: ActorRef, persist: Persist)
   case class ReplicationJob(client: ActorRef, rs: Set[ActorRef], replicate: Replicate)
-  case class PersistAckTimeout(client: ActorRef, id: Long)
-  case class GlobalReplicateAckTimeout(client: ActorRef, id: Long)
-
-  implicit val timeout = Timeout(1 second)
+  case class AckTimeout(client: ActorRef, id: Long)
 
   val primary: Receive = {
     case Get(key, id) =>
@@ -154,8 +146,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       if (checkOperationFinished(replicate)) respondSuccess(client, id)
     }
 
-    case PersistAckTimeout(client, id) => respondFailure(client, id)
-    case GlobalReplicateAckTimeout(client, id) => respondFailure(client, id)
+    case AckTimeout(client, id) => respondFailure(client, id)
 
     case Retry => primaryPersistAcks map { case (id, OperationJob(_, persist)) => {
       persistence ! persist
@@ -174,8 +165,8 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       /* terminate replicators corresponding removed secondaries */
       removed foreach { s =>
         val r = secondaries(s)
-        replicators -= r
         secondaries -= s
+        replicators -= r
         context.stop(r)
         context.stop(s)
       }
@@ -186,7 +177,8 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
         secondaries += s -> r
         replicators += r
 
-        kv foreach { case (k, v) => r ! Replicate(k, Some(v), -1) }
+        var i = 0
+        kv foreach { case (k, v) => r ! Replicate(k, Some(v), i); i += 1 }
       }}
     }
   }
@@ -220,16 +212,14 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
         case None        => kv -= key          /* remove */
       }
 
+      expectedSeq += 1
       persistence ! Persist(key, optValue, seq)
     }
 
-    case Persisted(key, seq) => if (secondaryAcks.isDefinedAt(seq)) {
+    case Persisted(key, seq) =>
       val SnapshotJob(replicator, Snapshot(_, optValue, _)) = secondaryAcks(seq)
-
       secondaryAcks -= seq
-      expectedSeq += 1
       replicator ! SnapshotAck(key, seq)
-    }
 
     case Retry => secondaryAcks map { case(seq, SnapshotJob(_, Snapshot(key, optValue, _))) =>
       persistence ! Persist(key, optValue, seq)

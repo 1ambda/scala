@@ -9,3 +9,5 @@ trait ThreadUtils {
   def log(message: String) =
     println(s"${Thread.currentThread().getName}: $message")
 }
+
+

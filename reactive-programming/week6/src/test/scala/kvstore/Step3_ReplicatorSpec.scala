@@ -4,12 +4,14 @@ import akka.testkit.{ TestProbe, TestKit, ImplicitSender }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.Matchers
 import org.scalatest.FunSuiteLike
-import akka.actor.ActorSystem
+import akka.actor.{Props, Actor, ActorLogging, ActorSystem}
 import scala.concurrent.duration._
-import kvstore.Arbiter.{ JoinedSecondary, Join }
+import kvstore.Arbiter.{JoinedPrimary, Replicas, JoinedSecondary, Join}
 import kvstore.Persistence.{ Persisted, Persist }
 import kvstore.Replicator.{ SnapshotAck, Snapshot, Replicate }
 import org.scalactic.ConversionCheckedTripleEquals
+
+import scala.util.Random
 
 class Step3_ReplicatorSpec extends TestKit(ActorSystem("Step3ReplicatorSpec"))
 with FunSuiteLike
@@ -58,5 +60,5 @@ with Tools {
 
     secondary.reply(SnapshotAck("k1", 0L))
   }
-
 }
+
