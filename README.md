@@ -1,6 +1,18 @@
 # Scala Note
 
-### Functional Programming in Scala
+### Concurrent Programming in Scala
+[Ref - Concurrent Programming in Scala](http://www.amazon.com/Learning-Concurrent-Programming-Aleksandar-Prokopec/dp/1783281413/ref=sr_1_1?s=books&ie=UTF8&qid=1433256276&sr=1-1&keywords=concurrent+programming+in+scala)
+
+[Chapter2](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/thread) - Thread, Volatile, JMM  
+[Chapter3](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/forkjoin) - Fork-Join Framework, Lock-Free Programming  
+
+### Funtional Programming in Scala
+
+[Ref - Functional Programming in Scala](http://www.amazon.com/gp/product/1617290653/ref=s9_psimh_gw_p14_d10_i3?pf_rd_m=ATVPDKIKX0DER&pf_rd_s=desktop-1&pf_rd_r=0DCD82G6BJE7XSPE2HWH&pf_rd_t=36701&pf_rd_p=2079475242&pf_rd_i=desktop)
+
+- [Note](https://github.com/1ambda/scala/tree/master/learning-functional-programming)  
+
+### Functional Programming in Scala (Coursera)
 
 by Martin Odersky
 
@@ -12,7 +24,7 @@ by Martin Odersky
 [Chapter 6](http://1ambda.github.io/functional-programming-in-scala-chapter-6/)  
 [Chapter 7](http://1ambda.github.io/functional-programming-in-scala-chapter-7/)  
 
-### Reactive Programming
+### Reactive Programming (Coursera)
 
 [Chapter 1](http://1ambda.github.io/reactive-programming-1/) - Monads, Random Generators  
 [Chapter 2](http://1ambda.github.io/reactive-programming-2/) - Stateful Object  
@@ -26,10 +38,6 @@ by Martin Odersky
 [Week4](https://github.com/1ambda/scala/tree/master/reactive-programming/week4) - Observable, Subscription  
 [Week5](https://github.com/1ambda/scala/tree/master/reactive-programming/week5) - Actor: Crawler, Actor Binary Tree  
 [Week6](https://github.com/1ambda/scala/tree/master/reactive-programming/week6) - Error Kernel, Event Stream, Persistent and Distributed Key-Value Store  
-
-### Learning FP
-
-- [Note](https://github.com/1ambda/scala/tree/master/learning-functional-programming)  
 
 ### Basics
 
