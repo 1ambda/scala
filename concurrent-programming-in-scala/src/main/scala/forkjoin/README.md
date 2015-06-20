@@ -297,6 +297,178 @@ The good news id that a CAS in Thread `T` can fail only when another thread `S` 
 If our part of the system does not progress, at least some other part of the system does. In fact, the `genUniqueId` method is fair 
 to all the threads in practice, and most JDKs implement `incrementAndGet` in a very similar manner.
 
+### Lock-Free Programming
+
+Every JVM object ha an intrinsic lock that is used when invoking the `synchronized` statement. 
+The intrinsic lock accomplishes this by blocking all threads that try to acquire it when it is unavailable. 
+
+But using locks is susceptible to deadlocks. Also, if the OS preempts a thread that is holding a lock, 
+it might arbitrarily delay the execution of other threads. 
+
+In **lock-free** programming, a thread executing a lock-free algorithm does not hold any locks when it gets 
+preempted by the OS, so it cannot temporarily block other threads. As a result, lock-free operations are impervious to deadlocks.
+
+Not all operations composed from atomic primitives are lock-free. Using atomic variables is a 
+necessary precondition for lock-freedom, but is it not sufficient. 
+
+```scala
+object AtomicLock extends App with ThreadUtils with ExecutorUtils {
+  private val lock = new AtomicBoolean(false)
+
+  def customSynchronized(body: => Unit): Unit = {
+    while(!lock.compareAndSet(false, true)) {}
+    try body finally lock.set(false)
+  }
+
+  // busy-waiting
+  var count = 0; for (i <- 0 until 10) execute {
+    customSynchronized { count += 1 }
+  }
+
+  Thread.sleep(1000)
+  log(s"Count: $count")
+}
+```
+
+> Given a set of threads executing an operation, an operation is lock-free if at least one thread 
+always completes the operation after a finite number of steps, regardless of the speed at which different threads progress.
+
+### Implementing Lock Explicitly
+
+- If a thread is creating a new file, then that file cannot be deleted
+- If one or more threads are copying a file, then the file can not be deleted
+- If a thread is deleting a file, then the file cannot be copied
+- Only a single thread in the file manager is deleting a file at a time
+
+This filesystem API will allow the concurrent copying and deleting of files.
+
+```scala
+object FileSystem extends ThreadUtils {
+  @tailrec
+  private def prepareForDelete(entry: Entry): Boolean = {
+    val s0: State = entry.state.get()
+
+    s0 match {
+      case i: Idle =>
+        if (entry.state.compareAndSet(s0, new Deleting)) true
+        else prepareForDelete(entry)
+
+      case c: Creating =>
+        logMessage("File currently created, cannot delete."); false
+
+      case c: Copying =>
+        logMessage("File currently copied, cannot delete."); false
+
+      case c: Deleting=>
+        logMessage("File currently deleted, cannot delete."); false
+    }
+  }
+
+  def logMessage(message: String) = log(message)
+}
+
+sealed trait State
+class Idle extends State
+class Creating extends State
+class Copying(val n: Int) extends State
+class Deleting extends State
+
+class Entry(val isDir: Boolean) {
+  val state = new AtomicReference[State](new Idle)
+}
+```
+
+An important thing to note about the `AtomicReference` class is that it always uses 
+**reference equality** and never call the `equals` method, even when `equals` is overridden 
+when comparing the old object and the new object assigned to `state`.
+
+### The ABA problem
+
+The ABA problem is a situation in concurrent programming where to reads of the same memory location 
+yield the same value A, which is used to indicate that the value of memory location did not change between the two reads. 
+
+This conclusion can be violated if other threads concurrently write some value `B` to memory location, 
+followed by the read of the value `A` again. The ABA problem is usually a type of a race condition. 
+
+Suppose that we implemented `Copying` as a class with a mutable field `n`. We might then be temp to reuse same `Copying` 
+object for subsequent calls to `release` and `acquire`. This is almost certainly not a good idea.
+ 
+```scala
+@tailrec
+def releaseCopy(e: Entry): Copying = e.state.get match {
+  case c: Copying =>
+    val newState = if (1 == c.n) new Idle else new Copying(c.n -1)
+
+    if (e.state.compareAndSet(c, newState)) c
+    else releaseCopy(e)
+}
+
+@tailrec
+def acquireCopy(e: Entry, c: Copying) = e.state.get match {
+  case i: Idle =>
+    c.n = 1
+    if (!e.state.compareAndSet(i ,c)) acquireCopy(e, c)
+
+  case oc: Copying =>
+    c.n = oc.n + 1
+    if (!e.state.compareAndSet(oc, c)) acquireCopy(e, c)
+}
+```
+
+The programmer's intent could be to reduce the pressure on the garbage collector by 
+allocating less `Copying` objects. However, this leads to the ABA problem.
+
+![]()
+
+The ABA problem manifests itself in the execution of the thread `T2`. Having first read the value of 
+the `state` field in the `Entry` object with the set method and the with the `compareAndSet` method later, 
+thread `T2` assumes that the value of the `state` field has not changed between two writes.
+
+There is no general technique to avoid the ABA problem, so we need to guard the program against it on a per-problem basis.
+
+- Create new objects before assigning them to the `AtomicReference objects`
+- Store immutable objects inside the `AtomicReference` objects
+- Avoid assigning a value that was previously already assigned to an atomic variable
+- If possible, make updates to numeric atomic variables monotonic, that is either 
+strictly decreasing or strictly increasing with respect to the previous value
+
+In some cases, the ABA problem does not affect the correctness of the algorithm. For example, 
+if we changed the `idle` class to a singleton object, the `prepareForDelete` method will continue to
+work correctly. Still, it is a good practice to follow the preceding guidelines, because they simplify the 
+reasoning about lock-free algorithms.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
