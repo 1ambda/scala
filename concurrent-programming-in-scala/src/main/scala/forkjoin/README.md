@@ -418,7 +418,8 @@ def acquireCopy(e: Entry, c: Copying) = e.state.get match {
 The programmer's intent could be to reduce the pressure on the garbage collector by 
 allocating less `Copying` objects. However, this leads to the ABA problem.
 
-![]()
+![](https://raw.githubusercontent.com/1ambda/scala/master/concurrent-programming-in-scala/screenshots/ABA_problem.png)
+(Ref - Concurrent Programming in Scala Book, Chapter 3, Page 164)
 
 The ABA problem manifests itself in the execution of the thread `T2`. Having first read the value of 
 the `state` field in the `Entry` object with the set method and the with the `compareAndSet` method later, 
