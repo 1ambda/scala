@@ -438,7 +438,7 @@ if we changed the `idle` class to a singleton object, the `prepareForDelete` met
 work correctly. Still, it is a good practice to follow the preceding guidelines, because they simplify the 
 reasoning about lock-free algorithms.
 
-
+### Lazy values
 
 
 
