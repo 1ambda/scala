@@ -1,5 +1,6 @@
 package chapter4
 
+import scala.annotation.tailrec
 
 trait Option[+A] {
   def map[B](f: A => B): Option[B] = this match {
@@ -29,17 +30,50 @@ trait Option[+A] {
   val absO: Option[Double] => Option[Double] = lift(math.abs)
 }
 
-case class Some[+A](get: A) extends Option[A]
-case object None extends Option[Nothing]
-
-object Chapter4 {
-  def variance(xs: Seq[Double]): scala.Option[Double] = {
-    mean(xs).flatMap((m: Double) => mean(xs.map(x => math.pow(x - m, 2))))
+object Option {
+  def Try[A](a: => A): Option[A] = {
+    try Some(a)
+    catch { case e: Exception => None }
   }
 
-  def mean(xs: Seq[Double]): scala.Option[Double] =
-    if (xs.isEmpty) scala.None else scala.Option(xs.sum / xs.length)
+  def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = {
+    for {
+      aValue <- a
+      bValue <- b
+    } yield f(aValue, bValue)
+  }
+
+  def sequence_1[A](a: List[Option[A]]): Option[List[A]] = a match {
+    case Nil => Some(Nil)
+    case x :: xs => x flatMap(xValue => sequence_1(xs) map (xValue :: _))
+  }
+
+  // simply,
+  def sequence_2[A](a: List[Option[A]]): Option[List[A]] =
+    a.foldRight[Option[List[A]]](Some(Nil))((x,y) => map2(x,y)(_ :: _))
+
+  // sequence using traverse
+  def sequence[A](a: List[Option[A]]): Option[List[A]] = {
+    traverse(a)(x => x)
+  }
+
+  def traverse_1[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
+    // iterate twice. not efficient
+    sequence(a map f)
+  }
+
+  def traverse_2[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
+    case Nil => Some(Nil)
+    case x :: xs => f(x) flatMap(xValue => traverse_2(xs)(f) map(xValue :: _))
+  }
+
+  // simply,
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
+    a.foldRight[Option[List[B]]](Some(Nil))((x, y) => map2(f(x), y)(_ :: _))
+  }
 }
 
+case class Some[+A](get: A) extends Option[A]
+case object None extends Option[Nothing]
 
 

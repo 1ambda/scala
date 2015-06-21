@@ -54,4 +54,34 @@ class Chapter4Spec extends FunSuite with Matchers {
     a.getOrElse(4) should be (4)
   }
 
+  test("map2 test") {
+    import Insurance._
+
+    parseInsuranceRateQuote("A", "5") should be (None)
+    parseInsuranceRateQuote("5", "A") should be (None)
+    parseInsuranceRateQuote("27", "5") should not be (None)
+  }
+
+  test("sequence test") {
+    import Option._
+    def parseInts(a: List[String]): Option[List[Int]] = sequence(a map(i => Try(i.toInt)))
+
+    parseInts(List("3", "asd", "5")) should be (None)
+    parseInts(List("asd", "3", "5")) should be (None)
+    parseInts(List("3", "asd")) should be (None)
+
+    parseInts(List("3", "4", "5")) should not be (None)
+  }
+
+  test("traverse test") {
+    import Option._
+    def parseInts(a: List[String]): Option[List[Int]] = traverse(a)(i => Try(i.toInt))
+
+    parseInts(List("3", "asd", "5")) should be (None)
+    parseInts(List("asd", "3", "5")) should be (None)
+    parseInts(List("3", "asd")) should be (None)
+
+    parseInts(List("3", "4", "5")) should not be (None)
+  }
+
 }
