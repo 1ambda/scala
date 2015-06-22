@@ -27,13 +27,18 @@ lazy val testDeps = Seq(
   scalaTest % Test
 )
 
+lazy val crawlerDeps = Seq(
+  json4s,
+  dispatch
+)
+
 lazy val root = (project in file("."))
   .settings(commonSettings: _ *)
   .settings(
     resolvers += mavenCentral,
     libraryDependencies ++= testDeps,
-    libraryDependencies ++= akkaDeps
+    libraryDependencies ++= akkaDeps,
+    libraryDependencies ++= crawlerDeps
   )
-
 
 Revolver.settings
