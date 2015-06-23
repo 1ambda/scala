@@ -29,7 +29,9 @@ lazy val testDeps = Seq(
 
 lazy val crawlerDeps = Seq(
   json4s,
-  dispatch
+  jsoup,
+  dispatch,
+  asyncHttpClient
 )
 
 lazy val root = (project in file("."))

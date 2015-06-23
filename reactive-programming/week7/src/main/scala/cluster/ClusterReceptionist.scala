@@ -35,6 +35,14 @@ class ClusterReceptionist extends Actor {
   }
 
   def active(addresses: Vector[Address]): Receive = {
+    case MemberUp(member) if member.address != cluster.selfAddress =>
+      context.become(active(addresses :+ member.address))
+
+    case MemberRemoved(member, _) =>
+      val withoutRemoved = addresses filterNot(_ == member.address)
+      if (withoutRemoved.isEmpty) context.become(awaitingMembers)
+      else context.become(active(withoutRemoved))
+
     case Get(url) if context.children.size < addresses.size =>
       val client = sender
       val address = pick(addresses)
@@ -42,9 +50,6 @@ class ClusterReceptionist extends Actor {
 
     case Get(url) =>
       sender ! Failed(url, "too many parallel queries")
-
-
-
   }
 
 }
