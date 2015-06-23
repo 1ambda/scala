@@ -1,5 +1,6 @@
 import Resolvers._
 import Dependencies._
+import sbtassembly.AssemblyKeys
 
 lazy val commonSettings = Seq(
   name := "week7",
@@ -8,8 +9,6 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.6",
   scalacOptions := Seq("-deprecation", "-encoding", "utf8"),
   fork := true,
-  fork in Test := true,
-  javaOptions += "-Xmx2G",
   javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
   parallelExecution := true,
   parallelExecution in Test := false

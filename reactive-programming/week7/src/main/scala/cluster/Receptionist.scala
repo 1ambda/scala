@@ -1,16 +1,25 @@
 package cluster
 
-import akka.actor.{Props, Address, Actor}
+import akka.actor.{ActorLogging, Props, Address, Actor}
 import akka.actor.Actor.Receive
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.{CurrentClusterState, MemberRemoved, MemberUp}
+import cluster.Receptionist.{Get, Result}
 
-case class Get(url: String)
-case class Failed(url: String, message: String)
+import scala.util.Random
 
-class ClusterReceptionist extends Actor {
+
+object Receptionist {
+  sealed trait ReceptionistEvent
+  case class Failed(url: String, message: String) extends ReceptionistEvent
+  case class Result(url: String, links: Set[String]) extends ReceptionistEvent
+  case class Get(url: String) extends ReceptionistEvent
+}
+
+class Receptionist extends Actor with ActorLogging {
 
   val cluster = Cluster(context.system)
+  val random = new Random
 
   cluster.subscribe(self, classOf[MemberUp])
   cluster.subscribe(self, classOf[MemberRemoved])
@@ -31,7 +40,7 @@ class ClusterReceptionist extends Actor {
     case MemberUp(member) if member.address != cluster.selfAddress =>
       context.become(active(Vector(member.address)))
 
-    case Get(url) => sender ! Failed(url, "no nodes available")
+    case Get(url) => sender ! Receptionist.Failed(url, "no nodes available")
   }
 
   def active(addresses: Vector[Address]): Receive = {
@@ -46,10 +55,23 @@ class ClusterReceptionist extends Actor {
     case Get(url) if context.children.size < addresses.size =>
       val client = sender
       val address = pick(addresses)
-      context.actorOf(Props(new Customer(client, url, address)))
+      context.actorOf(Props(new RemoteControllerDeployer(client, url, address)))
 
     case Get(url) =>
-      sender ! Failed(url, "too many parallel queries")
+      sender ! Receptionist.Failed(url, "too many parallel queries")
+
+    case Receptionist.Failed(url, message) =>
+      log.debug("Failed url: {}, message: {}", url, message)
+
+    case Receptionist.Result(url, links) =>
+      log.info("Success url: {}, links: {}", url, links)
+  }
+
+  def pick(addresses: Vector[Address]): Address = {
+    /* randomly pick an address from the vector */
+
+    val index = random.nextInt(addresses.size)
+    addresses(index)
   }
 
 }

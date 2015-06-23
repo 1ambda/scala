@@ -14,7 +14,7 @@ class Controller extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case Check(url, depth) =>
-      log.debug("depth: {}, checking {}", depth, url)
+      log.info("depth: {}, checking {}", depth, url)
 
       if (!cache(url) && depth > 0) {
         val getter = context.actorOf(Props(new Getter(url, depth - 1)))

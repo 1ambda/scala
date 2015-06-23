@@ -8,7 +8,7 @@ import cluster.Controller.Check
 import scala.concurrent.duration._
 
 
-class Customer(client: ActorRef, url: String, node: Address) extends Actor {
+class RemoteControllerDeployer(client: ActorRef, url: String, node: Address) extends Actor {
 
   implicit val s = context.parent
 
@@ -23,5 +23,17 @@ class Customer(client: ActorRef, url: String, node: Address) extends Actor {
 
   controller ! Check(url, 2)
 
-  override def receive: Actor.Receive = ???
+  override def receive = ({
+    case ReceiveTimeout =>
+      context.unwatch(controller)
+      client ! Receptionist.Failed(url, "controller timed out")
+
+    case Terminated(_) =>
+      client ! Receptionist.Failed(url, "")
+
+    case Controller.Result(links) =>
+      context.unwatch(controller)
+      client ! Receptionist.Result(url, links)
+
+  }: Receive) andThen (_ => context.stop(self))
 }
