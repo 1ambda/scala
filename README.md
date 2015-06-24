@@ -49,7 +49,7 @@ by Martin Odersky
 ### Scalaz
 
 - Monoid
-- Io Moand
+- Io Monad
 - [Functor](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/functor)
 - [Applicative](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/applicative)
 - [Either, Disjunction, Validation](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/disjunction)
