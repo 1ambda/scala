@@ -60,3 +60,11 @@ def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
 `Option` 이 그러한 목적으로 많이 쓰이긴 하지만, 에러에 대한 정보를 주지 않는다. 
 
 실패에 대한 원인을 얻기 위해, `Either` 를 사용할 수 있다.  
+
+## Chapter 5
+
+Non-strictness (혹은 laziness) 를 이용하면 컬렉션을 변환하고 탐색하는 `map`, `filter` 등을 하나의 패스로 융합해서 더 효율적인 계산을 해 낼 수 있다.
+  
+> **Strictness**
+> 어떤 표현식의 평가가 무한히 실행되면, 또는 한정돈 값을 돌려주지 않고 오류를 던진다면, 그러한 표현식을 일컬어 **bottom** 으로 평가되는 표현식이라고 부른다. 
+> 만약 **bottom** 으로 평가되는 식 모든 `x` 에 대해 `f(x)` 가 *bottom** 이면 `f` 는 **strict** 다. 
