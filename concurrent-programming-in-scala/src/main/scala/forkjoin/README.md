@@ -440,7 +440,87 @@ reasoning about lock-free algorithms.
 
 ### Lazy values
 
+```scala
+object LazyValsCreate extends App with ExecutorUtils with ThreadUtils {
+  lazy val obj = new AnyRef
+  lazy val non = s"made by ${Thread.currentThread.getName}"
 
+  execute {
+    log(s"EC sees obj = $obj")
+    log(s"EC sees non = $non")
+  }
+
+  log(s"Main sees obj = $obj")
+  log(s"Main sees non = $non")
+}
+
+// output
+[info] ForkJoinPool-1-worker-13: EC sees obj = java.lang.Object@56ae473c
+[info] main: Main sees obj = java.lang.Object@56ae473c
+[info] ForkJoinPool-1-worker-13: EC sees non = made by ForkJoinPool-1-worker-13
+[info] main: Main sees non = made by ForkJoinPool-1-worker-13
+
+// or
+[info] Running forkjoin.LazyValsCreate 
+[info] main: Main sees obj = java.lang.Object@6a3d1d00
+[info] ForkJoinPool-1-worker-13: EC sees obj = java.lang.Object@6a3d1d00
+[info] main: Main sees non = made by main
+[info] ForkJoinPool-1-worker-13: EC sees non = made by main
+```
+
+> In Sequential Scala programming, it is a good practice initialize the lazy value with an expression that does not depend on th current state of the program. 
+
+ 
+#### Singleton
+
+Singleton objects are implemented as lazy values under the hood. For example,
+
+```scala
+object LazyValsObject extends App with ExecutorUtils with ThreadUtils {
+  object Lazy { log("Running Lazy constructor")}
+
+  log("Main thread is about to reference Lazy.")
+  Lazy
+  log("Main thread completed")
+}
+
+// is translated by the Scala compiler as follows, 
+object LazyValsUnderTheHood extends App with ExecutorUtils with ThreadUtils {
+  @volatile private var _bitmap = false
+  private var _obj: AnyRef = _
+
+  def obj = if (_bitmap) _obj else this.synchronized {
+    if (!_bitmap) {
+      _obj = new AnyRef
+      _bitmap = true
+    }
+
+    _obj
+  }
+
+  log(s"$obj")
+  log(s"$obj")
+}
+```
+
+The double-checked locking idiom ensures that every lazy value is initialized by at most a single thread. 
+This mechanism is robust and ensures that lazy values are both thread-safe and efficient. 
+
+However, synchronization on the enclosing object can cause problem.
+
+```scala
+object LazyValsDeadLock extends App with ExecutorUtils with ThreadUtils {
+  object A { lazy val x: Int = B.y }
+  object B { lazy val y: Int = A.x }
+
+  execute { B.y }
+}
+```
+
+In a sequential setting, accessing either `A.x` or `B.y` results in a stack overflow. 
+The above example was carefully tuned to access both `A.x` and `B.y` at the same time. This results in a deadlock.
+  
+> Avoid cyclic dependencies between lazy values, as they can cause deadlocks.
 
 
 
