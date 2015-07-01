@@ -522,6 +522,38 @@ The above example was carefully tuned to access both `A.x` and `B.y` at the same
   
 > Avoid cyclic dependencies between lazy values, as they can cause deadlocks.
 
+Cyclic dependency between lazy values and singleton objects are much more devious and harder to spot.
+ 
+```scala
+object LazyValsAndBlocking extends App with ExecutorUtils with ThreadUtils {
+  lazy val x: Int = {
+    val t = thread { println(s"Initializing $x")}
+
+    t.join
+    1
+  }
+
+  x
+}
+```
+
+> Never invoke blocking operations inside lazy value initialization or singleton object constructor
+
+Lazy value cause deadlocks when they do not block themselves.
+
+```scala
+object LazyValsAndMonitors extends App with ExecutorUtils with ThreadUtils {
+  lazy val x = 1
+
+  this.synchronized {
+    val t = thread { x }
+    t.join()
+  }
+}
+```
+
+> Never call `synchronized` on publicly available objects. Always use a dedicated, private dummy object for synchronization.
+
 
 
 

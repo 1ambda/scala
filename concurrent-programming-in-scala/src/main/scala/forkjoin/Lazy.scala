@@ -59,3 +59,12 @@ object LazyValsAndBlocking extends App with ExecutorUtils with ThreadUtils {
 
   x
 }
+
+object LazyValsAndMonitors extends App with ExecutorUtils with ThreadUtils {
+  lazy val x = 1
+
+  this.synchronized {
+    val t = thread { x }
+    t.join()
+  }
+}
