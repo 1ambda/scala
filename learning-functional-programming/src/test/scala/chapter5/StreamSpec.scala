@@ -38,4 +38,49 @@ class StreamSpec extends FunSuite with Matchers {
       case Cons(h, t) => h()
     }
   }
+
+  val s = cons(1, cons(2, cons(3, cons(4, Empty))))
+
+  test("Stream.exist test") {
+    s exists (_ == 4) should be (true)
+    s exists (_ > 6) should be (false)
+  }
+
+  test("Stream.forAll test") {
+    s forAll (_ > 5) should be (false)
+    s forAll (_ < 4) should be (false)
+  }
+
+  test("Stream.map test") {
+    s.map(_ + 6).forAll(_ > 6) should be (true)
+  }
+
+  test("Stream.filter") {
+    s.filter (_ > 3) exists (_ == 4) should be (true)
+    s.filter (_ > 10) exists(_ => true) should be (false)
+
+    s.filter(_ > 3).toList.size should be (1)
+    s.filter(_ > 10).toList.size should be (0)
+  }
+
+  test("Stream.toList") {
+    s.toList should be (List(1, 2, 3, 4))
+    Empty.toList should be (Nil)
+    Empty.toList should be (List())
+  }
+
+  test("Stream.append") {
+    val t = cons(5, cons(6, Empty))
+    val u = s.append(t)
+
+    u.toList should be (List(1, 2, 3, 4, 5, 6))
+  }
+
+  test("Stream.flatMap") {
+    val s = cons(1, cons(4, Empty))
+    def g(x: Int): Stream[Int] = cons(x - 1, cons(x, cons(x + 1, Empty)))
+
+    s.flatMap(g).toList should be (List(0, 1, 2, 3, 4, 5))
+  }
+
 }
