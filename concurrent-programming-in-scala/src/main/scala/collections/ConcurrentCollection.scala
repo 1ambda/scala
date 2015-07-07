@@ -1,5 +1,7 @@
 package collections
 
+import java.util.concurrent.LinkedBlockingQueue
+
 import forkjoin.ExecutorUtils
 import thread.ThreadUtils
 
@@ -20,4 +22,17 @@ object CollectionsBad extends App with ExecutorUtils with ThreadUtils {
   Thread.sleep(500)
 }
 
+object CollectionIterators extends App with ThreadUtils with ExecutorUtils {
+  val queue = new LinkedBlockingQueue[String]
+
+  for (i <- 1 to 5500) queue.offer(i.toString)
+
+  execute {
+    val it = queue.iterator
+    while (it.hasNext) log(it.next())
+  }
+
+  for (i <- 1 to 5500) queue.poll()
+  Thread.sleep(1000)
+}
 
