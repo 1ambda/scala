@@ -7,6 +7,7 @@ import forkjoin.ExecutorUtils
 import org.apache.commons.io.FileUtils
 import thread.ThreadUtils
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.convert.decorateAsScala._
 import scala.annotation.tailrec
 import scala.collection._
@@ -14,8 +15,9 @@ import scala.collection._
 class FileSystem(root: String) extends ThreadUtils with ExecutorUtils {
   private val messages = new LinkedBlockingQueue[String]
   val rootDir = new File(root)
-  val files: concurrent.Map[String, Entry] =
-    new ConcurrentHashMap[String, Entry]().asScala
+  val files: concurrent.Map[String, Entry] = new TrieMap()
+
+  def allFiles(): Iterable[String] = for((name, state) <- files) yield name
 
   @tailrec
   private def prepareForDelete(entry: Entry): Boolean = {

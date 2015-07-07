@@ -4,7 +4,7 @@ import forkjoin.ExecutorUtils
 
 object FileSystemWatcher extends App with ExecutorUtils {
 
-  val fs = new FileSystem("/Users/1002471/Desktop")
+  val fs = new FileSystem("/Users/1002471/Desktop/")
 
 //  execute {
 //    fs.copyFile("sy-2.png", "sy-44.png")

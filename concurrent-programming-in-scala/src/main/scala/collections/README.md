@@ -295,7 +295,37 @@ This method is **not atomic**, while its individual steps are atomic. They can b
 Another example is `clear`, which does not have to be atomic on concurrent collections in general and can behave like he concurrent data 
 structure iterators wi studies before.
 
-TODO: File remove check
+> You should never use `null` as a key or value in a concurrent map or concurrent set. Many concurrent data structure 
+implementation on JVM rely on using null as a special indicator of the absence of an element.
+
+<br/>
+
+## Concurrent Traversals
+
+Scala has an answer for concurrent collection traversals. The `TrieMap` collection from the `scalc.collection.concurrent` package, 
+which is based on the concurrent [Ctrie](http://www.slideshare.net/AleksandarProkopec/ctrie-data-structure) data structure, is a concurrent map 
+implementation that produces consistent iterators. 
+
+When its `iterator` method is called, the `TrieMap` collection atomically takes a snapshot of all the elements. 
+If the `TrieMap` collection is later modified during the traversal, modifications are not visible in the snapshot and 
+the iterator does not reflect them. 
+
+The `snapshot` method of the `TrieMap` class incrementally rebuilds parts of the `TrieMap` collection when they are first 
+accessed by some thread. The `readOnlySnapshot` method, internally used by the `iterator` method, is even more efficient. 
+It ensures that only the modified parts of the `TrieMap` collection are lazily copied. 
+
+- If application requires consistent iterators, then you should definitely use `TrieMap` collections.
+- On the other hand, if the application does not require consistent iterators and rarely modified the concurrent map, you can consider using `ConcurrentHashMap`, 
+as their lookup operations are slightly faster.
+
+> Use `TrieMap` collections if you require consistent iterators and `ConcurrentHashMap` collections when the `get` and `apply` operations are the **bottlenecks** in your program.
+
+<br/>
+
+## Creating and Handling Processes
+
+
+
 
 
 
