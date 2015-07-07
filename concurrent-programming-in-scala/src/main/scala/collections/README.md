@@ -324,25 +324,45 @@ as their lookup operations are slightly faster.
 
 ## Creating and Handling Processes
 
+- The only available implementation of a certain software component is a command-line utility or prepackaged program.
+- We want to put code in a sandbox. A third-party plugin might have to run with a reduced set of permissions.
+- We don't want to run in the same JVM process for performance reasons. Garbage collection or JIT compilation in a separate process should not affect the execution of our process.
 
+The `scala.sys.process` package contains a concise API for dealing with other processes. We can run the child process synchronously or async.
 
+```scala
+object ProcessRun extends App with ThreadUtils {
+  val command = "ls"
+  // sync
+  val exitcode = command.!
 
+  log(s"command exited with status $exitcode")
+}
+```
 
+If we are interested in standard output, we can use `!!` method.
 
+```scala
+def lineCount(filename: String): Int = {
+  val ouptut = s"wc $filename".!!
+  
+  output.trim.split(" ").head.toInt
+}
+```
 
+```scala
+object ProcessAsync extends App with ThreadUtils {
+  val lsProcess = "ls -R /".run()
 
+  Thread.sleep(1000)
 
+  log("Timeout - killing ls!")
 
+  lsProcess.destroy()
+}
+```
 
-
-
-
-
-
-
-
-
-
-
+Overloads of the `run` method allow you to communicate with the process by hooking the custom input and output stream or 
+providing a custom `logger` object that is called each time the new process outputa line.
 
 
