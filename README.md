@@ -54,6 +54,7 @@ by Martin Odersky
 - [Applicative](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/applicative)
 - [Either, Disjunction, Validation](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/disjunction)
 - [State Monad](https://github.com/1ambda/scala/tree/master/playground/src/test/scala/state)
+- Traverse
 
 ### Akka
 
