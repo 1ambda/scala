@@ -3,6 +3,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scalaz.Apply
 import scalaz.std.option._
 import scalaz.std.list._
+import scalaz.std.vector._
 import scalaz.syntax.std.option._
 
 // ref: https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/ApplyUsage.scala
@@ -62,6 +63,45 @@ class ApplySpec extends FlatSpec with Matchers {
     (1.some |@| none[Int] |@| 3.some)(_ + _ + _) shouldBe None
   }
 
+  "Writer" can "be used to write log" in {
+    import scalaz.{WriterT, Writer, DList, Id}
+    import scalaz.syntax.writer._
+    import scalaz.syntax.apply._
 
+    // ref: SO: http://stackoverflow.com/questions/3352418/what-is-a-dlist
+    // Difference Lists are a list-like data structure that supports O(1) append operations
+    type Logged[A] = Writer[DList[String], A]
+
+    // log a message, return no results (hence Unit)
+    def log(message: String): Logged[Unit] = DList(message).tell
+
+    // log that we are adding, and return the results of adding x and y
+    def compute(x: Int, y: Int): Logged[Int] =
+      log("adding " + x + " and " + y) as (x+y)
+
+    def addAndLog(x: Int, y: Int): Logged[Int] =
+      log("begin") *> compute(x, y) <* log("end")
+
+    val (written, sum) = addAndLog(1, 2).run
+    written.toList shouldBe List("begin", "adding 1 and 2", "end")
+    sum shouldBe 3
+  }
+
+  "Apply instance" can "be composed" in {
+    val applyVLO = Apply[Vector] compose Apply[List] compose Apply[Option]
+
+    val arg1 = Vector(List(1.some, none[Int]), List(2.some, 3.some))
+    val arg2 = Vector(List("a".some, "b".some, "c".some))
+
+    val deepResult = applyVLO.apply2(arg1, arg2)(_.toString + _)
+    val expectedDeep = Vector(
+      List(Some("1a"), Some("1b"), Some("1c"),
+        None, None, None),
+      List(Some("2a"), Some("2b"), Some("2c"),
+        Some("3a"), Some("3b"), Some("3c")))
+
+    deepResult shouldBe expectedDeep
+
+  }
 
 }
