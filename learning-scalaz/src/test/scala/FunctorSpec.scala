@@ -1,13 +1,10 @@
-package functor
-
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scalaz.Functor
+import scalaz.concurrent.Task
+import scalaz.std.list._
 import scalaz.std.option._
 import scalaz.syntax.functor._
-import scalaz.std.list._
-import scalaz.syntax.equal._
-import scalaz.concurrent.Task
 
 // ref: https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/FunctorUsage.scala
 class FunctorSpec extends FlatSpec with Matchers {
