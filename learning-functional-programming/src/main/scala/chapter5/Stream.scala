@@ -1,5 +1,6 @@
 package chapter5
 
+import scala.annotation.tailrec
 import scala.{Option => _, Either => _, Left => _, Right => _, _} // hide std library `Option` and `Either`, since we are writing our own in this chapter
 import scala.collection.immutable.{Stream => _, List => _}
 
@@ -65,6 +66,12 @@ trait Stream[+A] {
 
   def flatMap[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h, t) => f(h) append t)
+
+  def take(n: Int): Stream[A] = this match {
+    case Cons(h, t) if n != 0 => cons(h(), t().take(n - 1))
+    case _ => Empty
+  }
+
 }
 
 case object Empty extends Stream[Nothing]
@@ -88,5 +95,37 @@ object Stream {
     // h, t will be evaluated whenever accesses
     Cons(() => h, () => t)
   }
+
+  def constant2[A](n: A): Stream[A] = {
+    cons(n, constant(n))
+  }
+
+  def from2(n: Int): Stream[Int] = {
+    cons(n, from2(n + 1))
+  }
+
+  def fibs2: Stream[Int] = {
+
+    def recur(x: Int, y: Int): Stream[Int] = {
+      cons(x, recur(y, x + y))
+    }
+
+    recur(0, 1)
+  }
+
+  def constant[A](n: A): Stream[A] = unfold(n)(_ => Some((n, n)))
+
+  def from(n: Int): Stream[Int] = unfold(n)(n => Some((n, n + 1)))
+
+  def fibs: Stream[Int] = unfold((0, 1)) { case (x, y) =>
+      Some((x, (y, x + y)))
+  }
+
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = f(z) match {
+    case Some((a, ns)) => cons(a, unfold(ns)(f))
+    case None => empty
+  }
 }
+
+
 

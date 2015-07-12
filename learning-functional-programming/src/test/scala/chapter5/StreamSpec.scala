@@ -83,4 +83,28 @@ class StreamSpec extends FunSuite with Matchers {
     s.flatMap(g).toList should be (List(0, 1, 2, 3, 4, 5))
   }
 
+  test("Stream.take") {
+    val s = cons(1, cons(2, Empty))
+
+    s.take(1).toList shouldBe List(1)
+    s.take(3).toList shouldBe List(1, 2)
+  }
+
+  test("Stream.constant") {
+    val fiveOnes = Stream.constant(1).take(5)
+
+    fiveOnes.toList.size shouldBe 5
+    fiveOnes.forAll(_ == 1)
+  }
+
+  test("Stream.from") {
+    val fromFiveToNine = Stream.from(5).take(5)
+
+    fromFiveToNine.toList shouldBe List(5, 6, 7, 8, 9)
+  }
+
+  test("Stream.fibs") {
+    Stream.fibs.take(7).toList shouldBe List(0, 1, 1, 2, 3, 5, 8)
+  }
+
 }

@@ -27,6 +27,10 @@ class ArrowSpec extends FunSuite with Matchers {
     val rev = (_: String) reverse
 
     plus1.first apply (7, "abc") shouldBe (8, "abc")
+    plus1.second apply ("def", 14) shouldBe ("def", 15)
+    (plus1 *** rev)(8, "abc") shouldBe (9, "cba")
+    (plus1 &&& times2)(7) shouldBe (8, 14)
+    plus1.product (9, 99) shouldBe (10, 100)
   }
 
   test("Arrow.>>>, Arrow.<<<") {
