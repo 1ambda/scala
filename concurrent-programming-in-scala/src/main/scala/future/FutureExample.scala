@@ -5,6 +5,8 @@ import thread.ThreadUtils
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.util.control.NonFatal
+import scala.util.{Try, Success, Failure}
 import scala.io.Source
 
 class FutureExample {}
@@ -28,7 +30,7 @@ object FutureDataType extends App with ThreadUtils with ExecutorUtils {
   log(s"value: ${buildFile.value}")
 }
 
-object FuturesCallbacks extends App {
+object FuturesCallbacks extends App with ThreadUtils with ExecutorUtils {
 
   def getUrlSpec(): Future[List[String]] = Future {
     val url = "http://www.w3.org/Addressing/URL/url-spec.txt"
@@ -37,7 +39,54 @@ object FuturesCallbacks extends App {
     try f.getLines().toList finally f.close();
   }
 
-  val urlSpec = Future[List[String]] = getUrlSpec()
+  def find(lines: List[String], keyword: String): String =
+    lines.zipWithIndex collect {
+      case (line, n) if line.contains(keyword) => (n, line)
+    } mkString("\n")
 
-  def find(lines: LIst)
+  val urlSpec:Future[List[String]] = getUrlSpec()
+  urlSpec foreach {
+    case lines => log(find(lines, "telnet"))
+  }
+
+  log("callback registered, continuing with other work")
+  Thread.sleep(2000)
+}
+
+object FutureFailure extends App with ThreadUtils with ExecutorUtils {
+  val urlSpec: Future[String] = Future {
+    val invalidUrl = "http://example.com/non-exists/google"
+
+    Source.fromURL(invalidUrl).mkString
+  }
+
+  urlSpec.failed foreach {
+    case t => log(s"exception occurred - $t")
+  }
+
+  Thread.sleep(1000)
+}
+
+object FuturesTry extends App with ThreadUtils with ExecutorUtils {
+  val threadName: Try[String] = Try(Thread.currentThread.getName)
+  val someText: Try[String] = Try("Try objects are synchronous")
+  val message: Try[String] = for {
+    tn <- threadName
+    st <- someText
+  } yield s"Message $st was create on t = $tn"
+
+  def handleMessage(t: Try[String]) = t match {
+    case Success(msg) => log(msg)
+    case Failure(error) => log(s"unexpected failure - $error")
+  }
+
+  handleMessage(message)
+}
+
+object FuturesNonFatal extends App with ThreadUtils {
+  val f = Future { throw new InterruptedException }
+  val g = Future { throw new IllegalArgumentException }
+
+  f.failed foreach { case t => log(s"error $t")}
+  g.failed foreach { case NonFatal(t) => log(s"error $t")}
 }
