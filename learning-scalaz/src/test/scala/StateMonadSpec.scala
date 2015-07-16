@@ -1,6 +1,8 @@
 import org.scalatest.{Matchers, FunSuite}
 
+import scala.concurrent.Future
 import scalaz._, Scalaz._
+import scala.io.Source
 
 /*
 
@@ -96,13 +98,49 @@ class StateMonadSpec extends FunSuite with Matchers{
     m.run("hello") shouldBe ("hello" * 5, 25)
   }
 
+  lazy val buildFile: String = {
+    val f = Source.fromFile("build.sbt")
+    try f.getLines().mkString("\n") finally f.close
+  }
+
+  lazy val wordList = buildFile.split("\n").toList
+    .flatMap(s => s.split(" "))
+    .filter(s => s != "")
+
+  def words(str: String) = wordList.filter(_.contains(str))
+
   // ref: https://softwarecorner.wordpress.com/2013/08/29/scalaz-state-monad/
   test("wordcount example 1") {
-    // todo words => Source.fromFile("build.sbt")
-//    def wordCounts(str: String, currMap: Map[String, Int]): Map[String, Int] = {
-//      words(str).foldLeft(currMap) { (map, word) =>
-//
-//      }
-//    }
+    def wordCounts(str: String, currMap: Map[String, Int]): Map[String, Int] = {
+      words(str).foldLeft(currMap) { (map, word) =>
+        val count = map.getOrElse(str, 0) + 1
+        map + (str-> count)
+      }
+    }
+
+    val m = wordCounts("scalaz", Map.empty[String, Int])
+    m.size should not be 0
+  }
+
+  test("wordCount example 2") {
+    def wordCount(str: String): State[Map[String, Int], Unit] =
+      modify { currMap: Map[String, Int] =>
+        words(str).foldLeft(currMap) { (map, word) =>
+          val count = map.getOrElse(str, 0) + 1
+          map + (str-> count)
+        }
+      }
+
+    val m = for {
+      _ <- wordCount("scalaz")
+      _ <- wordCount("org")
+      _ <- wordCount("version")
+    } yield ()
+
+    val (wordMap, _) = m.run(Map.empty[String, Int])
+  }
+
+  test("wordCount example 3") {
+
   }
 }
