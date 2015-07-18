@@ -1,6 +1,7 @@
 package filesystem
 
 import forkjoin.ExecutorUtils
+import thread.ThreadUtils
 
 object FileSystemWatcher extends App with ExecutorUtils {
 
@@ -20,4 +21,12 @@ object FileSystemWatcher extends App with ExecutorUtils {
   }
 
   Thread.sleep(2000)
+}
+
+object FileSystemMonitorExample extends App with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  FileSystemMonitor.fileCreated(".") foreach {
+    case filename => log(s"Detected new file $filename`")
+  }
 }

@@ -5,12 +5,14 @@ import java.util.concurrent.atomic.AtomicReference
 import java.io.File
 import forkjoin.ExecutorUtils
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.monitor.{FileAlterationListenerAdaptor, FileAlterationObserver, FileAlterationMonitor}
 import thread.ThreadUtils
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.decorateAsScala._
 import scala.annotation.tailrec
 import scala.collection._
+import scala.concurrent.{Promise, Future}
 
 class FileSystem(root: String) extends ThreadUtils with ExecutorUtils {
   private val messages = new LinkedBlockingQueue[String]
@@ -126,4 +128,24 @@ class Deleting extends State
 
 class Entry(val isDir: Boolean) {
   val state = new AtomicReference[State](new Idle)
+}
+
+object FileSystemMonitor {
+  def fileCreated(directory: String): Future[String] = {
+    val p = Promise[String]
+
+    val fileMonitor = new FileAlterationMonitor(1000)
+    val observer = new FileAlterationObserver(directory)
+    val listener = new FileAlterationListenerAdaptor {
+      override def onFileCreate(file: File): Unit = {
+        try p.trySuccess(file.getName) finally  fileMonitor.stop()
+      }
+    }
+
+    observer.addListener(listener)
+    fileMonitor.addObserver(observer)
+    fileMonitor.start()
+
+    p.future
+  }
 }

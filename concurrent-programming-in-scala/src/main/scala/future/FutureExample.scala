@@ -5,6 +5,7 @@ import thread.ThreadUtils
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import scala.util.{Try, Success, Failure}
 import scala.io.Source
@@ -89,4 +90,34 @@ object FuturesNonFatal extends App with ThreadUtils {
 
   f.failed foreach { case t => log(s"error $t")}
   g.failed foreach { case NonFatal(t) => log(s"error $t")}
+}
+
+object FutureBlockingExample1 extends App with ThreadUtils {
+  val startTime = System.nanoTime
+
+  val futures = for (_ <- 0 until 16) yield Future {
+    Thread.sleep(1000)
+  }
+
+  for (f <- futures) Await.ready(f, Duration.Inf)
+
+  val endTime = System.nanoTime
+
+  log(s"Total time = ${(endTime - startTime) / 1000000}")
+  log(s"Total CPUs = ${Runtime.getRuntime.availableProcessors}")
+}
+
+object FutureBlockingExample2 extends App with ThreadUtils {
+  val startTime = System.nanoTime
+
+  val futures = for (_ <- 0 until 16) yield Future {
+    blocking { Thread.sleep(1000) }
+  }
+
+  for (f <- futures) Await.ready(f, Duration.Inf)
+
+  val endTime = System.nanoTime
+
+  log(s"Total time = ${(endTime - startTime) / 1000000}")
+  log(s"Total CPUs = ${Runtime.getRuntime.availableProcessors}")
 }
