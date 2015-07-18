@@ -16,7 +16,7 @@ class ReaderSpec extends FunSuite with Matchers {
     import FunctionalDatabase._
     val task: Work[Option[String]] = for {
       _ <- FunctionalDatabase.put("foo", "Bar")
-      found <- Database.find[String]("foo")
+      found <- FunctionalDatabase.find[String]("foo")
     } yield found
 
     val result: Option[String] = FunctionalDatabase.run(task)
@@ -27,7 +27,7 @@ object FunctionalDatabase {
   import scalaz.Reader
 
   type Key = String
-  type Work[+A] = Reader[Transaction, A]
+  type Work[A] = Reader[Transaction, A]
   trait Transaction
   object CustomTransaction extends Transaction
 
