@@ -4,7 +4,7 @@ trait RNG {
   def nextInt: (Int, RNG)
 
   def unit[A](a: A): Rand[A] = rng => (a, rng)
-  def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
+  def _map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, rng2) = s(rng)
       (f(a), rng2)
   }
@@ -34,7 +34,7 @@ trait RNG {
 
   def nonNegativeEven: Rand[Int] = map(nonNegativeEven)(x => x - x % 2)
 
-  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = { rng =>
+  def _map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = { rng =>
     val (a, nextRngA) = ra(rng)
     val (b, nextRngB) = rb(nextRngA)
 
@@ -82,6 +82,22 @@ trait RNG {
     map(nonNegativeInt) { _ % n}
 
 
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] =
+    rng => {
+      val (a, rng1) = f(rng)
+      g(a)(rng1)
+    }
+
+  def nonNegativeLessThan(n: Int): Rand[Int] = flatMap(nonNegativeInt) { i =>
+    val mod = i % n
+    if (i + (n - 1) - mod >= 0) unit(mod) else nonNegativeLessThan(n)
+  }
+
+  def map[A, B](ra: Rand[A])(f: A => B): Rand[B] =
+    flatMap(ra)(a => unit(f(a)))
+
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => map(rb)(b => f(a, b)))
 }
 
 case class SimpleRNG(seed: Long) extends RNG {
