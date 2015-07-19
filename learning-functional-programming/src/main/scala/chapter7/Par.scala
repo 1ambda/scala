@@ -26,7 +26,7 @@ object Par {
     (es: ExecutorService) => es.submit(new Callable[A] {
       override def call(): A = a(es).get
     })
-  
+
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
   def run[A](es: ExecutorService)(a: Par[A]): Future[A] = a(es)
 

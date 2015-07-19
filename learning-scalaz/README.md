@@ -1,5 +1,6 @@
 # Scalaz Examples
 
+
 ## DONE
 
 - Functor
@@ -22,4 +23,4 @@
 - [Scalaz for Dummies](http://labs.bench.co/blog/2014/11/10/scalaz-for-dummies)
 - [Scalaz - Getting to grips with the Free Monad](http://polygonalhell.blogspot.kr/2014/12/scalaz-getting-to-grips-free-monad.html)
 - [Free Monads Are Simple](http://underscore.io/blog/posts/2015/04/14/free-monads-are-simple.html)
-
+- [Free Monad](http://noelwelsh.com/assets/downloads/advanced-scala-2015-free-monads.pdf)
