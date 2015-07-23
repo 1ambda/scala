@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import thread.ThreadUtils
 
+import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.Random
 
 object ParallelCollectionExamples
@@ -36,6 +37,10 @@ object ParUid extends App with ParUtils with ThreadUtils {
 
   val parTime = timed { for (i <- (0 until 10000000).par) uid.incrementAndGet() }
   log(s"parTime = $parTime ms")
+}
+
+object ParConfig extends App {
+  val pool = new ForkJoinPool(2)
 }
 
 

@@ -95,3 +95,39 @@ Parallel programs share other resource in addition to computing power. When diff
 more resources han are currently available, an effect known as **resource contention** occurs.
 
 ## Parallel Collection Class Hierarchy 
+
+> A parallel collection cannot be a subtype of a sequential collection. If it were, then the **Liskov substitution** principle would be violated. 
+The Liskov substitution principle states that if the type `S` is a subtype of `T`, then the object of type `T` can be replaced with objects of type `S` 
+without affecting the correctness of the program.
+
+If parallel collections are subtypes of sequential collections, then some method can return a sequential collection with the static type `Seq[Int]`, where 
+the sequence object is a parallel sequence collection at runtime. Clients can cal method such as `foreach` on the collection without knowing that the 
+body of the `foreach` method need synchronization, and their programs would not work correctly. For these reasons, 
+parallel collections form a hierarchy that is separate from the sequential collections.
+
+![](https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcShIAiLxr6w3dJ9AawBFqDn1t_vc1ywK4AjkL04DFU55KBUFH0R)
+(Ref - lamp.epfl.ch)
+
+The most general collection type is called `Traversable` which provides `find`, `map`, `filter` or `reduceLeft` that are implemented in terms of its abstract `foreach` method. 
+Its `Iterable[T]` subtype offers additional operations such as `zip`, `grouped`, `sliding` and `sameElements` that are implemented using its `iterator` method. 
+`Seq`, `Map` and `Set` are iterable collections thar represent Scala sequences, maps, and sets, respectively. 
+
+Parallel collections form a separate hierarchy. The most general parallel collection type is called `ParIterable`. 
+Methods such as `foreach`, `map` or `reduce` on a `ParIterable` object execute in parallel. 
+ 
+The `ParSeq`, `ParMap`, `ParSet` collection are parallel collections that correspond to `Set`, `Map`, `Seq`, but not their subtypes. 
+
+```scala
+def nonNull(xs: Seq[T]): Seq[T] = xs.filter(_ != null)
+def nonNull(xs: ParSeq[T]): ParSeq[T] = xs.filter(_ != null)
+def nonNull(xs: GenSeq[T]): GenParSeq[T] = xs.filter(_ != null)
+```
+
+## Configuring the parallelism level
+
+
+
+
+
+
+
