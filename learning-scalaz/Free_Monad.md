@@ -1,6 +1,13 @@
 # Free Monad
 
 [Ref - Advanced Scala 2015 Free Monad](http://noelwelsh.com/assets/downloads/advanced-scala-2015-free-monads.pdf)
+[Ref2 - Running Free with Monads](http://www.slideshare.net/kenbot/running-free-with-the-monads)
+[Ref3 - http://stackoverflow.com/questions/13352205/what-are-free-monads]
+
+## SO: What is Free Monad?
+
+**Free monads are just a general way of turning functors into monads**. That is, given any functor `f`, 
+`Free f` is monad. This would not be very useful, except you get a pair of functions
 
 ## Monad 
 
@@ -56,6 +63,22 @@ final case class Join[F[_], A](s: F[Free[F, A]]) extends Free[F, A]
 ### Coyoneda
 
 The Coyoneda automatically convert a type constructor into a functor that the free monad requires.
+
+
+### Functors
+
+Functors are not just data structures that hold values. The are computations! **Free's real power is unleashed when the Functor maps over functions**
+
+`Free[Function0, A]` is incredibly useful. It is also known as `Trampoline[A]`
+
+- Moves tail calls onto the heap, avoiding stack overflow
+- The best we can get for mutual tail recursion on the JVM
+
+
+
+
+
+
 
 
 
