@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import thread.ThreadUtils
 
-import scala.collection.{GenSet, GenSeq}
+import scala.collection.{GenIterable, GenSet, GenSeq}
 import scala.concurrent.Future
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.collection.parallel._
@@ -71,7 +71,7 @@ object ParHtmlSearch extends App with ParUtils with ThreadUtils {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def getHtmlSpec() = Future {
-    val url = "http://www.scala-lang.org/api/current/index.html#scala.collection.parallel.TaskSupport"
+    val url = "http://akka.io/docs/"
 
     val specSrc = Source.fromURL(url)
     try specSrc.getLines.toArray finally specSrc.close()
@@ -172,4 +172,61 @@ object ParSideEffectsCorrect extends App with ParUtils with ThreadUtils {
 
   log(s"seqTotal $seqTotal")
   log(s"parTotal $parTotal")
+}
+
+object ParNonDeterministicOperation extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    val pattern = ".*Akka.*"
+    val seqResult = specDoc.find(_.matches(pattern))
+    val parResult = specDoc.par.find(_.matches(pattern))
+    log(s"seqResult $seqResult")
+    log(s"parResult $parResult")
+  }
+
+  Thread.sleep(3000)
+}
+
+object ParDeterministicOperation extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    val pattern = ".*Akka.*"
+    val seqIndex = specDoc.indexWhere(_.matches(pattern))
+    val parIndex = specDoc.par.indexWhere(_.matches(pattern))
+    val seqResult = if (seqIndex != -1) Some(specDoc(seqIndex)) else None
+    val parResult = if (parIndex != -1) Some(specDoc(parIndex)) else None
+    log(s"seqResult $seqResult")
+    log(s"parResult $parResult")
+  }
+
+  Thread.sleep(3000)
+}
+
+object ParNonCommutativeOperator extends App with ParUtils with ThreadUtils {
+  val doc = collection.mutable.ArrayBuffer.tabulate(20)(i => s"Page $i, ")
+
+  def test(doc: GenIterable[String]): Unit = {
+    val seqText = doc.seq.reduceLeft(_ + _)
+    val parText = doc.par.reduce(_ + _)
+
+    log(s"seqText $seqText\n")
+    log(s"parText $parText\n")
+  }
+
+  test(doc)
+  test(doc.toSet)
+}
+
+object ParNonAssociativeOperator extends App with ParUtils with ThreadUtils {
+  def test(doc: GenIterable[Int]): Unit = {
+    val seqText = doc.seq.reduceLeft(_ - _)
+    val parText = doc.par.reduce(_ - _)
+
+    log(s"seqText $seqText\n")
+    log(s"parText $parText\n")
+  }
+
+  test(0 until 30)
 }

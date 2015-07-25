@@ -359,5 +359,172 @@ If the amount of work executed per element is low and the matches are frequent, 
 
 ## Nondeterministic Parallel Operations
 
+```scala
+object ParNonDeterministicOperation extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    val pattern = ".*Akka.*"
+    val seqResult = specDoc.find(_.matches(pattern))
+    val parResult = specDoc.par.find(_.matches(pattern))
+    log(s"seqResult $seqResult")
+    log(s"parResult $parResult")
+  }
+
+  Thread.sleep(3000)
+}
+
+// output
+> runMain parallel.ParNonDeterministicOperation
+[info] Running parallel.ParNonDeterministicOperation 
+[info] ForkJoinPool-1-worker-13: seqResult Some(    <title>Akka Documentation | Akka</title>)
+[info] ForkJoinPool-1-worker-13: parResult Some(    <p>Akka Documentation</p>)
+```
+
+If we want to retrieve the first occurrence, we need to use `indexWhere` instead
+
+```scala
+object ParDeterministicOperation extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    val pattern = ".*Akka.*"
+    val seqIndex = specDoc.indexWhere(_.matches(pattern))
+    val parIndex = specDoc.par.indexWhere(_.matches(pattern))
+    val seqResult = if (seqIndex != -1) Some(specDoc(seqIndex)) else None
+    val parResult = if (parIndex != -1) Some(specDoc(parIndex)) else None
+    log(s"seqResult $seqResult")
+    log(s"parResult $parResult")
+  }
+
+  Thread.sleep(3000)
+}
+```
+
+> Parallel collection operations other than `find` are deterministic as long as their operators are **pure functions**.
+
+Even if a function does not modify any memory locations, it is not pure if it reads memory location that might change. For example,
+
+```scala
+val g (x: Int) => (x, uid.get)
+```
+
+When used with a non-pure function, any parallel operation can become **non-deterministic**.
+
+<br/>
+
+## Commutative and Associative Operators
+
+A binary operator `op` is **commutative** if changing the order of its arguments return the same result.
+
+```scala
+op(a, b) == op(b a)
+```
+
+Binary operators for the parallel `reduce`, `fold`, `aggregate`, and `scan` operations never need to be commutative. 
+Parallel collection operations always respect the relative order of the elements when applying binary operators, provided that 
+underlying collections have any ordering.
+
+```scala
+object ParNonCommutativeOperator extends App with ParUtils with ThreadUtils {
+  val doc = collection.mutable.ArrayBuffer.tabulate(20)(i => s"Page $i, ")
+
+  def test(doc: GenIterable[String]): Unit = {
+    val seqText = doc.seq.reduceLeft(_ + _)
+    val parText = doc.par.reduce(_ + _)
+
+    log(s"seqText $seqText\n")
+    log(s"parText $parText\n")
+  }
+
+  test(doc)
+  test(doc.toSet)
+}
+
+// output
+[info] Running parallel.ParNonCommutativeOperator 
+[info] main: seqText Page 0, Page 1, Page 2, Page 3, Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11, Page 12, Page 13, Page 14, Page 15, Page 16, Page 17, Page 18, Page 19, 
+[info] 
+[info] main: parText Page 0, Page 1, Page 2, Page 3, Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11, Page 12, Page 13, Page 14, Page 15, Page 16, Page 17, Page 18, Page 19, 
+[info] 
+[info] main: seqText Page 9, Page 15, Page 5, Page 2, Page 1, Page 10, Page 8, Page 17, Page 19, Page 6, Page 14, Page 0, Page 7, Page 18, Page 3, Page 4, Page 11, Page 13, Page 16, Page 12, 
+[info] 
+[info] main: parText Page 12, Page 16, Page 13, Page 11, Page 4, Page 3, Page 18, Page 7, Page 0, Page 14, Page 6, Page 19, Page 17, Page 8, Page 10, Page 1, Page 2, Page 5, Page 15, Page 9, 
+```
+
+
+<br/>
+
+A binary operator `op` is **associative** if applying `op` consecutively to a sequence of values `a`, `b`, and `c` gives the same result regardless of 
+the order in which the operator is applied.
+
+```scala
+op(a, (op(b, c)) == op(op(a, b), c)
+```
+
+Parallel collection operations usually require associative binary operators. While using subtraction with `reduceLeft` means that 
+all the numbers in the collection should be subtracted from the first number, using subtraction in `reduce`, `fold`, or `scan` gives 
+nondeterministic and incorrect results.
+
+```scala
+object ParNonAssociativeOperator extends App with ParUtils with ThreadUtils {
+  def test(doc: GenIterable[Int]): Unit = {
+    val seqText = doc.seq.reduceLeft(_ - _)
+    val parText = doc.par.reduce(_ - _)
+
+    log(s"seqText $seqText\n")
+    log(s"parText $parText\n")
+  }
+
+  test(0 until 30)
+}
+
+// output
+
+[info] Running parallel.ParNonAssociativeOperator 
+[info] main: seqText -435
+[info] 
+[info] main: parText -57
+[info] 
+
+> runMain parallel.ParNonAssociativeOperator
+[info] Running parallel.ParNonAssociativeOperator 
+[info] main: seqText -435
+[info] 
+[info] main: parText -15
+[info] 
+
+```
+
+> Binary operators used in parallel operations do not need to be commutative
+
+> Make sure that binary operators used in parallel operations are associative
+ 
+<br/>
+
+Parallel operations such as `aggregate` require multiple binary operators, `sop` and `cop`
+
+```scala
+def aggregate[S](z: S)(sop: (S, T) => S, cop: (S, S) => S): S
+```
+
+The `sop` operator is used to fold elements within a subset as signed to a specific processor. 
+The `cop` operator is used to merge the subsets together, and is of the same type as the operators for `reduce` and `fold`.
+
+The `aggregate` operation requires that 
+
+- `cop` is associative
+- `z` is the **zero element** for the accumulator (`cop(z, a) == a`) 
+- `sop` and `cop` must give the same result irrespective of the order in which element subsets are assigned to processors
+
+```scala
+cop(sop(z, a), sop(z, b)) == cop(z, sop(sop(z, a), b))
+```
+
+## Using Parallel and Concurrent Collection Together
+
+
+
+
 
 
