@@ -1,4 +1,6 @@
-import org.scalatest.{Matchers, FunSuite}
+package free
+
+import org.scalatest.{FunSuite, Matchers}
 
 /*
   ref:
@@ -8,9 +10,8 @@ import org.scalatest.{Matchers, FunSuite}
 
  */
 
-import scalaz._
-import Scalaz._
 import scalaz.Free._
+import scalaz._
 
 class FreeMonadSpec extends FunSuite with Matchers {
   import KeyValueStore._

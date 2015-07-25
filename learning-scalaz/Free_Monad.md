@@ -7,7 +7,7 @@
 ## SO: What is Free Monad?
 
 **Free monads are just a general way of turning functors into monads**. That is, given any functor `f`, 
-`Free f` is monad. This would not be very useful, except you get a pair of functions
+`Free f` is monad. 
 
 ## Monad 
 
