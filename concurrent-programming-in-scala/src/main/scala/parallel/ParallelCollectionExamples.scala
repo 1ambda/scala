@@ -4,7 +4,11 @@ import java.util.concurrent.atomic.AtomicLong
 
 import thread.ThreadUtils
 
+import scala.collection.{GenSet, GenSeq}
+import scala.concurrent.Future
 import scala.concurrent.forkjoin.ForkJoinPool
+import scala.collection.parallel._
+import scala.io.Source
 import scala.util.Random
 
 object ParallelCollectionExamples
@@ -17,6 +21,11 @@ trait ParUtils {
     dummy = body
     val end   = System.nanoTime
     ((end - start) / 1000) / 1000.0
+  }
+
+  def warnedTimed[T](n: Int = 200)(body: => T): Double = {
+    for (_ <- 0 until n ) body
+    timed(body)
   }
 }
 
@@ -39,8 +48,128 @@ object ParUid extends App with ParUtils with ThreadUtils {
   log(s"parTime = $parTime ms")
 }
 
-object ParConfig extends App {
+object ParConfig extends App with ParUtils with ThreadUtils {
   val pool = new ForkJoinPool(2)
+  val customTaskSupport = new ForkJoinTaskSupport(pool)
+
+  val numbers = Random.shuffle(Vector.tabulate(5000000)(i => i))
+
+  val parTime = timed {
+    val parNumbers = numbers.par
+
+    parNumbers.tasksupport = customTaskSupport
+
+    val n = parNumbers.max
+
+    println(s"largest number $n")
+  }
+
+  log(s"parTime $parTime ms")
+}
+
+object ParHtmlSearch extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  def getHtmlSpec() = Future {
+    val url = "http://www.scala-lang.org/api/current/index.html#scala.collection.parallel.TaskSupport"
+
+    val specSrc = Source.fromURL(url)
+    try specSrc.getLines.toArray finally specSrc.close()
+  }
+
+  getHtmlSpec() foreach { case specDoc =>
+    def search(d: GenSeq[String]): Double = warnedTimed() {
+      d.indexWhere(line => line.matches("quiescent"))
+    }
+
+    val seqTime = search(specDoc)
+    log(s"seqTime $seqTime ms")
+
+    val parTime = search(specDoc)
+    log(s"parTime $parTime ms")
+  }
+
+  Thread.sleep(3000);
+}
+
+object ParNonParallelizableCollections extends App with ParUtils with ThreadUtils {
+  val l = List.fill(10000000)("")
+  val v = Vector.fill(10000000)("")
+
+  log(s"list conversion time: ${timed(l.par)} ms")
+  log(s"vector conversion time: ${timed(v.par)} ms")
+}
+
+object ParNonParallelizableOperations extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    def allMatches(d: GenSeq[String]) = warnedTimed() {
+      val result = d.foldLeft("") { (acc, line) =>
+        if (line.matches("quiescent")) s"$acc\nline" else acc
+      }
+    }
+
+    val seqTime = allMatches(specDoc)
+    log(s"seqTime $seqTime ms")
+
+    val parTime = allMatches(specDoc)
+    log(s"parTime $parTime ms")
+  }
+
+  Thread.sleep(5000)
 }
 
 
+object ParNonParallelizableOperations2 extends App with ParUtils with ThreadUtils {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  ParHtmlSearch.getHtmlSpec() foreach { case specDoc =>
+    def allMatches(d: GenSeq[String]) = warnedTimed() {
+      val result = d.aggregate("")(
+        (acc, line) => if (line.matches("quiescent")) s"$acc\nline" else acc,
+        (acc1, acc2) => acc1 + acc2
+      )
+    }
+
+    val seqTime = allMatches(specDoc)
+    log(s"seqTime $seqTime ms")
+
+    val parTime = allMatches(specDoc)
+    log(s"parTime $parTime ms")
+  }
+
+  Thread.sleep(5000)
+}
+
+object ParSideEffectsIncorrect extends App with ParUtils with ThreadUtils {
+  def intersectionSize(a: GenSet[Int], b: GenSet[Int]): Int = {
+    var total = 0 /* mutable variable */
+    for (x <- a) if (b contains x) total += 1
+    total
+  }
+
+  val a = (0 until 1000).toSet
+  val b = (0 until 1000 by 4).toSet
+
+  var seqTotal = intersectionSize(a, b)
+  var parTotal = intersectionSize(a.par, b.par)
+
+  log(s"seqTotal $seqTotal")
+  log(s"parTotal $parTotal")
+}
+
+object ParSideEffectsCorrect extends App with ParUtils with ThreadUtils {
+  def intersectionSize(a: GenSet[Int], b: GenSet[Int]): Int = {
+    a.count(x => b contains x)
+  }
+
+  val a = (0 until 1000).toSet
+  val b = (0 until 1000 by 4).toSet
+
+  var seqTotal = intersectionSize(a, b)
+  var parTotal = intersectionSize(a.par, b.par)
+
+  log(s"seqTotal $seqTotal")
+  log(s"parTotal $parTotal")
+}
