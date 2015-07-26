@@ -523,7 +523,339 @@ cop(sop(z, a), sop(z, b)) == cop(z, sop(sop(z, a), b))
 
 ## Using Parallel and Concurrent Collection Together
 
+Parallel collection operations are not allowed to access mutable states without the use of synchronization. 
+This includes modifying sequential Scala collections from within a parallel operations.
 
+To avoid non-deterministic result, we can use concurrent skip list collection from the JDK.
+
+```scala
+import java.util.concurrent.ConcurrentSkipListSet
+import scala.collection.convert.decorateAsScala._
+def intersection(a: GenSet[String], b: GenSet[String]) = {
+  val skiplist = new ConcurrentSkipListSet[String]
+  for (x <- a.par) if (b contains x) skiplist.add(x)
+  val result: Set[String] = skiplist.asScala
+  result
+}
+```
+
+## Weakly Consistent Iterators
+
+Iterators on most concurrent collections are weakly consistent. The Scala `TrieMap` collection is an exception to this rule. 
+
+```scala
+object ConcurrentTrieMap extends App with ParUtils with ThreadUtils {
+  val cache = new TrieMap[Int, String]()
+
+  for (i <- 0 until 100) cache(i) = i.toString
+  for ((index, string) <- cache.par) cache(-index) = s"-$string"
+
+  log(s"cache - ${cache.keys.toList.sorted}")
+}
+```
+
+> Whenever the program data needs to be simultaneously modified and traversed in parallel, 
+use the `TrieMap` collection.
+
+<br/>
+
+## Implementing custom parallel collections
+
+```scala
+class ParString(val str: String) extends immutable.ParSeq[Char] {
+  override def apply(i: Int): Char = str.charAt(i)
+
+  override protected[parallel] def splitter: SeqSplitter[Char] =
+    new ParStringSplitter(str, 0, str.length)
+
+  override def seq: Seq[Char] = new WrappedString(str)
+
+  override def length: Int = str.length
+}
+```
+
+Where defining a custom regular sequence requires implementing its `iterator` method, 
+custom parallel collections need a `splitter` method. Calling `splitter` returns an 
+object of `Splitter[T]` type, a special iterator that can be split into subsets.
+
+Also, parallel collections need a `seq` method, which returns a sequential Scala collection. 
+Since `String` itself comes form java and is not a Scala collection, we will use its `WrappedString` class.
+
+### Splitters
+
+A splitter is an iterator that can be efficiently split into disjoint subsets. Here, 
+efficient means that the splitter's `split` method must have `O(log N)` running time.
+
+Stated informally, a splitter is not allowed to copy large parts of the collection when split. If it did, 
+the computational overhead from splitting would overcome any benefits of parallelization and become a serial bottleneck.
+
+```scala
+trait IterableSplitter[T] extends Iterator[T] {
+  def dup: IterableSplitter[T]
+  def remaining: Int
+  def split: Seq[IterableSplitter[T]]
+}
+```
+
+The `split` method can be called only once and it invalidates the splitter. None of the splitter's methods 
+should be called after calling `split`. 
+
+```scala
+trait SeqSplitter[T] extends IterableSplitter[T] {
+  def psplit(sizes: Int*): Seq[ParStringSplitter] = {
+    val ss = for (sz <- sizes) yield {
+      val nlimit = (i + sz) min limit
+      val ps = new ParStringSplitter(s, i, nlimit)
+      i = nlimit
+      ps
+    }
+    if (i == limit) ss
+    else ss :+ new ParStringSplitter(s, i, limit)
+  }
+}
+```
+
+Sequence splitters declare an additional method, `psplit` that takes the list of sizes for the splitter partitions and returns as many splitters with as many elements as specified 
+by the `sizes` parameter. 
+
+```scala
+class ParStringSplitter(val s: String,
+                        var i: Int,
+                        val limit: Int) extends SeqSplitter[Char] {
+
+  final def next(): Char = {
+    val r = s.charAt(i)
+    i += 1
+    r
+  }
+
+  final def hasNext: Boolean = i < limit
+
+  def remaining: Int = limit - i
+
+  def dup = new ParStringSplitter(s, i, limit)
+
+  def split = {
+    val rem = remaining
+    if (rem >= 2) psplit(rem / 2, rem - rem / 2) else Seq(this)
+  }
+
+  def psplit(sizes: Int*) = {
+    val ss = for (sz <- sizes) yield {
+      val nlimit = (i + sz) min limit
+      val ps = new ParStringSplitter(s, i, nlimit)
+      i = nlimit
+      ps
+    }
+    if (i == limit) ss
+    else ss :+ new ParStringSplitter(s, i, limit)
+  }
+}
+
+class ParString(val str: String) extends immutable.ParSeq[Char] {
+  def apply(i: Int) = str.charAt(i)
+  def length = str.length
+  def splitter = new ParStringSplitter(str, 0, str.length)
+  def seq = new collection.immutable.WrappedString(str)
+}
+
+object CustomCharCount extends App with ParUtils with ThreadUtils {
+  val txt = "A custom text " * 250000
+  val parText = new ParString(txt)
+
+  val seqTime = warmedTimed(50) {
+    txt.foldLeft(0) { (n, c) =>
+      if (Character.isUpperCase(c)) n + 1 else n
+    }
+  }
+
+  log(s"seqTime $seqTime ms")
+
+  val parTime = warmedTimed(50) {
+    parText.aggregate(0) (
+      (n, c) => if (Character.isUpperCase(c)) n + 1 else n,
+      _ + _
+    )
+  }
+
+  log(s"parTime $parTime ms")
+}
+
+// output
+
+[info] Running parallel.CustomCharCount 
+[info] main: seqTime 34.904 ms
+[info] main: parTime 9.315 ms
+```
+
+<br/>
+
+### Combiners
+
+Collection methods in the Scala standard library are divided into two major groups. 
+
+- **accessor** methods, such as `foldLeft`, `find`, or`exists` return a single value
+- **transformer** methods, such as `map`, `filter`, `groupBy`, create new collections and return them
+
+To generically implement transformer operations, the Scala collection framework uses an abstraction called a **builder**
+
+```scala
+trait Builder[T, Repr] {
+  def +=(x: T): Builder[T, Repr]
+  def result: Repr
+  def clear(): Unit
+}
+```
+
+Every collection defines a custom builder that is used in various transformer operations. For example, the `filter` operation is defined in the 
+`Traversable` trait
+ 
+```scala
+// Traversable
+
+def newBuilder: Builder[T, Traversable[T]]
+def filter(p: T => Boolean): Traversable[T] = {
+  val b = newBuilder
+  for (x <- this) if (p(x)) b += x
+  b.result
+}
+```
+
+**Combiners** are a parallel counterpart of standard builders, and are represented with the 
+`Combiner[T, Repr]` type, which subtypes the `Builder[T, Repr]` type.
+
+```scala
+trait Combiner[-Elem, +To] extends Builder[Elem, To] with Sizing with Parallel {
+
+  @transient
+  @volatile
+  var _combinerTaskSupport = defaultTaskSupport
+
+  def combinerTaskSupport = {
+    val cts = _combinerTaskSupport
+    if (cts eq null) {
+      _combinerTaskSupport = defaultTaskSupport
+      defaultTaskSupport
+    } else cts
+  }
+
+  def combinerTaskSupport_=(cts: TaskSupport) = _combinerTaskSupport = cts
+  
+  def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo]
+
+  def canBeShared: Boolean = false
+
+  def resultWithTaskSupport: To = {
+    val res = result()
+    setTaskSupport(res, combinerTaskSupport)
+  }
+}
+```
+
+The `combine` method takes another combiner called `other`, and produces a third combiner that contains the element of the `this` and `other` combiners. 
+After the `combine` method returns, the contents of both `this` and `other` combiners are undefined, and should not be used again.
+
+This constraint allows reusing the `this` or `other` combiner object as the resulting combiner. Importantly, 
+if `other` combiner is the same runtime object as the `this` combiner, the `combine` method should just return `this` combiner.
+
+There are three way to implement a custom combiner, as follows.
+
+- **Merging:** Some data structures have an efficient merge operation that can be used to implement `combine` method
+- **Two-phase evaluation:** Here, elements are first partially sorted into buckets that can be efficiently concatenated, and placed into the final data structure once it is allocated
+- **Concurrent data structure:** The `+=` method is implemented by modifying a concurrent data structure shared between different combiners, and the `combine` method does not do anything
+
+Most data structures do not have an efficient merge operations, so we usually have to use two-phase evaluation in the combiner implementation. 
+
+```scala
+class ParStringCombiner extends Combiner[Char, ParString] {
+  private val chunks = new ArrayBuffer += new StringBuilder
+  private var lastc = chunks.last
+
+  var size = 0
+  def +=(elem: Char) = {
+    lastc += elem
+    size += 1
+    this
+  }
+
+  override def combine[N <: Char, NewTo >: ParString](other: Combiner[N, NewTo]): Combiner[N, NewTo] = {
+    if (this eq other) this else other match {
+      case other: ParStringCombiner =>
+        size += other.size
+        chunks ++= other.chunks
+        lastc = chunks.last
+        this
+    }
+  }
+
+  override def result(): ParString = {
+    val rsb = new StringBuilder
+    for (sb <- chunks) rsb.append(sb)
+
+    new ParString(rsb.toString)
+  }
+
+  override def clear(): Unit = ???
+}
+
+object ParCombinerPerformance extends App with ParUtils with ThreadUtils {
+  val text = "A custom text" * 25000
+  val parText = new ParString(text)
+
+  val seqTime = warmedTimed(250) { text.filter(_ != ' ')}
+  log(s"seqTime $seqTime ms")
+
+  val parTime = warmedTimed(250) { parText.filter(_ != ' ')}
+  log(s"parTime $parTime ms")
+}
+
+// output
+[info] Running parallel.ParCombinerPerformance 
+[info] main: seqTime 1.819 ms
+[info] main: parTime 2.32 ms
+```
+
+## Alternative Data-Parallel Frameworks
+
+> Parallel collections can be suboptimal when collection contain primitive values. Since parallel collections are generic in the type of values 
+the contain, tye are susceptible to **auto-boxing**
+
+Whenever the data in out program is composed of primitive values packed in arrays, we should consider using an alternative macro-based framework such as **ScalaBlitz** to achieve top performance.
+
+```scala
+object BlitzCmparison extends App with ParUtils with ThreadUtils {
+  import scala.collection.par._
+  import scala.collection.par.Scheduler.Implicits.global
+
+  val array = (0 until 100000).toArray
+  val seqtime = warmedTimed(1000) {
+    array.reduce(_ + _)
+  }
+  val partime = warmedTimed(1000) {
+    array.par.reduce(_ + _)
+  }
+  val blitztime = warmedTimed(1000) {
+    array.toPar.reduce(_ + _)
+  }
+  log(s"sequential time - $seqtime")
+  log(s"parallel time   - $partime")
+  log(s"ScalaBlitz time - $blitztime")
+}
+```
+
+## Collection Hierarchy in ScalaBlitz
+
+Unlike standard Scala parallel collections, ScalaBlitz is not integrated directly into the collection hierarchy. 
+Instead, ScalaBlitz used implicit conversions to add data-parallel operations to the existing collections.
+
+```scala
+trait Par[Repr]
+```
+
+When the `toPar` method gets invoked on `Repr`, a `Par[Repr]` wrapper object is returned. (`Array[Int]` -> `Par[Array[Int]]`)
+
+The `Par` wrapper object does not by itself have any parallel operations. instead, the parallel operations are added to the `Par` object through 
+implicit conversions. One of the reasons for this design is to disallow calling data-parallel operations on non-parallelizable collections (`Par[List[Int]]`)
 
 
 
