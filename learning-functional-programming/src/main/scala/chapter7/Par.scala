@@ -1,34 +1,64 @@
 package chapter7
 
-import java.util.concurrent.{Callable, TimeUnit, Future, ExecutorService}
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.{CountDownLatch, Callable, TimeUnit, ExecutorService}
 
 
 object Par {
-  type Par[A] = ExecutorService => Future[A]
-
-  case class UnitFuture[A](get: A) extends Future[A] {
-    def isDone = true
-    def get(timeout: Long, timeUnit: TimeUnit) = get
-    def isCancelled = false
-    def cancel(evenIfRunning: Boolean): Boolean = true
+  sealed trait Future[A] {
+    private[chapter7] def apply(callback: A => Unit): Unit
   }
 
+  type Par[A] = ExecutorService => Future[A]
+
   def map2[A, B, C](pa: Par[A], pb: Par[B])(f: (A, B) => C): Par[C] =
-    (es: ExecutorService) => {
-      val fa = pa(es)
-      val fb = pb(es)
-      UnitFuture(f(fa.get, fb.get))
+    (es: ExecutorService) => new Future[C] {
+      def apply(callback: (C) => Unit): Unit = {
+        var ar: Option[A] = None
+        var br: Option[B] = None
+
+        val combiner = Actor[Either[A, B]](es) {
+          case Left(a) => br match {
+            case None => ar = Some(a)
+            case Some(b) => eval(es)(callback(f(a, b)))
+          }
+
+          case Right(b) => ar match {
+            case None => br = Some(b)
+            case Some(a) => eval(es)(callback(f(a, b)))
+          }
+        }
+
+        pa(es)(a => combiner ! Left(a))
+        pb(es)(b => combiner ! Right(b))
+      }
     }
 
-  def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a)
+  def unit[A](a: A): Par[A] =
+    (es: ExecutorService) => new Future[A] {
+      def apply(callback: (A) => Unit): Unit =
+        callback(a)
+    }
 
   def fork[A](a: => Par[A]): Par[A] =
-    (es: ExecutorService) => es.submit(new Callable[A] {
-      override def call(): A = a(es).get
-    })
+    (es: ExecutorService) => new Future[A] {
+      def apply(callback: (A) => Unit): Unit =
+        eval(es)(a(es)(callback))
+    }
+
+  def eval(es: ExecutorService)(r: => Unit): Unit =
+    es.submit(new Callable[Unit] { def call = r })
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
-  def run[A](es: ExecutorService)(a: Par[A]): Future[A] = a(es)
+
+  def run[A](es: ExecutorService)(p: Par[A]): A = {
+    val ref = new AtomicReference[A]
+    val latch = new CountDownLatch(1)
+
+    p(es) { a => ref.set(a); latch.countDown }
+    latch.await
+    ref.get
+  }
 
   def asyncF[A, B](f: A => B): A => Par[B] =
     (a: A) => lazyUnit(f(a))
