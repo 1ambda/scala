@@ -18,8 +18,14 @@ object IntTypeSpec {
 }
 
 object IntListTypeSpec {
+  import IntTypeSpec._
+
   val sum = ((1 :: 2 :: IntNil) ++ (3 :: IntNil))
   val expected = (6 :: IntNil)
 
   assert(sum == expected)
+
+  val l1: IntListType[Int3] = (1 :: 2 :: 3 :: IntNil)
+  val l2: IntListType[Int2] = (5 :: 6 :: IntNil)
+  val l3: IntListType[Int3#plus[Int2]] = l1 ++ l2
 }
