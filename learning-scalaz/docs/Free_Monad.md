@@ -3,6 +3,7 @@
 [Ref - Advanced Scala 2015 Free Monad](http://noelwelsh.com/assets/downloads/advanced-scala-2015-free-monads.pdf)
 [Ref2 - Running Free with Monads](http://www.slideshare.net/kenbot/running-free-with-the-monads)
 [Ref3 - http://stackoverflow.com/questions/13352205/what-are-free-monads]
+[Ref4 - http://tpolecat.github.io/presentations/scala-symposium-15.pdf]
 
 ## SO: What is Free Monad?
 
@@ -73,6 +74,16 @@ Functors are not just data structures that hold values. The are computations! **
 
 - Moves tail calls onto the heap, avoiding stack overflow
 - The best we can get for mutual tail recursion on the JVM
+
+### Scalaz Free
+
+- `Free[F[_], ?)` is a **monad** for any **functor** `F`
+- `Coyoneda[S[_], ?]` is a **function** for any `S` at all
+- By substitution, `Free[Coyoneda[S[_], ?], ?]` is a **monad** for any `S` at all 
+- scalaz abbreviates this type as `FreeC[S, ?]`
+
+
+
 
 
 
