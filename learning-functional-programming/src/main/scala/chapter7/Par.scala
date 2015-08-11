@@ -90,4 +90,51 @@ object Par {
   }
 
   def delay[A](pa: => Par[A]): Par[A] = es => pa(es)
+
+  def _choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    _choiceN(map(cond)(x => if (x) 0 else 1))(List(t, f))
+
+  def _choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es => new Future[A] {
+      override private[chapter7] def apply(callback: (A) => Unit): Unit =
+        n(es) { index =>
+          eval(es) { choices(index)(es)(callback) }
+        }
+    }
+
+  def flatMap[A, B](p: Par[A])(f: A => Par[B]): Par[B] =
+    es => new Future[B] {
+      override private[chapter7] def apply(callback: (B) => Unit): Unit =
+        p(es) { a =>
+          eval(es) { f(a)(es)(callback) }
+        }
+    }
+
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    flatMap(cond)(x => if (x) t else f)
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    flatMap(n)(index => choices(index))
+
+  // using flatMap
+  // def join[A](p: Par[Par[A]]): Par[A] =
+  //   flatMap(p)(x => x)
+
+  def join[A](p: Par[Par[A]]): Par[A] =
+    es => new Future[A] {
+      override private[chapter7] def apply(callback: (A) => Unit): Unit =
+        p(es) { p2 =>
+          eval(es) { p2(es)(callback) }
+        }
+    }
+
+  // support infix notation
+  implicit def toParOps[A](p : Par[A]): ParOps[A] = new ParOps(p)
+
+  class ParOps[A](p: Par[A]) {
+    def map[B](f: A => B): Par[B] = Par.map(p)(f)
+    def map2[B, C](b: Par[B])(f: (A, B) => C): Par[C] = Par.map2(p, b)(f)
+    def flatMap[B](f: A => Par[B]): Par[B] = Par.flatMap(p)(f)
+    def zip[B](b: Par[B]): Par[(A, B)] = p.map2(b)((_, _))
+  }
 }
