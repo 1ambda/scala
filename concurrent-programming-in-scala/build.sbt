@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" % "scala-async_2.11" % "0.9.4",
   "org.scalaz" % "scalaz-concurrent_2.11" % "7.2.0-M2",
   "com.github.scala-blitz" % "scala-blitz_2.11" % "1.2",
+  "org.scala-stm" % "scala-stm_2.11" % "0.7",
   "io.reactivex" %% "rxscala" % "0.25.0"
 )
 
