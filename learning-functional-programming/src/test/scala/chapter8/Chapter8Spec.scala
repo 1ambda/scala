@@ -1,5 +1,8 @@
 package chapter8
 
+
+import java.util.concurrent.{Executors, ExecutorService}
+
 import org.scalatest.{Matchers, FunSuite}
 
 class Chapter8Spec extends FunSuite with Matchers {
@@ -40,5 +43,60 @@ class Chapter8Spec extends FunSuite with Matchers {
     }
 
     Prop.run(sortedProp)
+  }
+
+  test("par unit test1") {
+    val es: ExecutorService = Executors.newCachedThreadPool
+    val p1 = Prop.forAll(Gen.unit(Par)) { i =>
+      Par.map(Par.lazyUnit(1))(_ + 1)(es).get == Par.unit(2)(es).get
+    }
+
+    Prop.run(p1)
+  }
+
+  test("par unit test2") {
+    val es: ExecutorService = Executors.newCachedThreadPool
+    val p = Prop.check {
+      Par.map(Par.lazyUnit(1))(_ + 1)(es).get == Par.unit(2)(es).get
+    }
+
+    Prop.run(p)
+  }
+
+  test("par unit test3") {
+    val es: ExecutorService = Executors.newCachedThreadPool
+    val p = Prop.check {
+      Par.equal(
+        Par.map(Par.unit(1))(_ + 1),
+        Par.unit(2)
+      )(es).get
+    }
+
+    Prop.run(p)
+  }
+
+  test("par unit test4") {
+    val es: ExecutorService = Executors.newCachedThreadPool
+    val p = Prop.checkPar {
+      Par.equal(
+        Par.map(Par.unit(1))(_ + 1),
+        Par.unit(2)
+      )
+    }
+
+    Prop.run(p)
+  }
+
+  test("par unit test5") {
+    val es: ExecutorService = Executors.newCachedThreadPool
+    val pint = Gen.choose(0, 10) map (Par.unit _)
+    val p = Prop.forAllPar(pint) {n =>
+      Par.equal(
+        Par.map(n)(y => y),
+        n
+      )
+    }
+
+    Prop.run(p)
   }
 }

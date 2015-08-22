@@ -1,5 +1,9 @@
 package chapter8
+
+import java.util.concurrent.Executors
+
 import Prop._
+import chapter8.Par.Par
 
 case class Prop(run: (MaxSize, TestCaseCount, RNG) => Result) {
   def check: Either[(String, Int), Int] = ???
@@ -103,9 +107,33 @@ object Prop {
         println(s"! Falsified after $successCount passed tests:\n $message")
       case Passed =>
         println(s"+ OK, passed $count tests")
+      case Proved =>
+        println(s"+ OK, proved Property")
     }
   }
 
+  def check(p: Boolean): Prop = Prop { (_, _, _) =>
+    if (p) Proved else Falsified("()", 0)
+  }
 
+  // for Par testing
+  import Gen._
+  val randomExecutors = weighted(
+    choose(1,4).map(Executors.newFixedThreadPool) -> .75,
+    unit(Executors.newCachedThreadPool) -> .25) // `a -> b` is syntax sugar for `(a,b)`
 
+  def forAllPar2[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(randomExecutors.map2(g)((_,_))) { case (es,a) => f(a)(es).get }
+
+  def forAllPar3[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(randomExecutors ** g) { case (es, a) => f(a)(es).get }
+
+  def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(randomExecutors ** g) { case es ** a => f(a)(es).get } /* unapply */
+
+  def checkPar(p: Par[Boolean]) = forAllPar(Gen.unit())(_ => p)
+}
+
+object ** {
+  def unapply[A, B](p: (A, B)) = Some(p)
 }
