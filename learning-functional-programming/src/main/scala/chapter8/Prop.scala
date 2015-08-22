@@ -52,7 +52,6 @@ object Prop {
   type TestCaseCount = Int
   type MaxSize = Int
 
-
   def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
     (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
       case (a, i) => try {
@@ -101,7 +100,12 @@ object Prop {
 
     p.run(maxSize, count, rng) match {
       case Falsified(message, successCount) =>
-        println()
+        println(s"! Falsified after $successCount passed tests:\n $message")
+      case Passed =>
+        println(s"+ OK, passed $count tests")
     }
   }
+
+
+
 }
