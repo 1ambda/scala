@@ -3,7 +3,6 @@ package chapter7
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{CountDownLatch, Callable, TimeUnit, ExecutorService}
 
-
 object Par {
   sealed trait Future[A] {
     private[chapter7] def apply(callback: A => Unit): Unit
