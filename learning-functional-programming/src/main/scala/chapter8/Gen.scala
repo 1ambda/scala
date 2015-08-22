@@ -1,6 +1,23 @@
 package chapter8
 
 case class Gen[A](sample: State[RNG, A]) {
+  def map[B](f: A => B): Gen[B] =
+    Gen(sample.map(a => f(a)))
+
+  def flatMap[B](f: A => Gen[B]): Gen[B] =
+    Gen(sample.flatMap(a => f(a).sample))
+
+  def listOf(size: Int): Gen[List[A]] =
+    Gen.listOfN(size, this)
+
+  def listOfN(size: Gen[Int]): Gen[List[A]] =
+    size.flatMap(n => this.listOf(n))
+
+  def unsized: SGen[A] =
+    SGen(_ => this) // SGen(n => Gen(sample))
+}
+
+object Gen {
   def unit[A](a: => A): Gen[A] = // State.unit(a)
     Gen(State(rng => (a, rng)))
 
@@ -17,18 +34,6 @@ case class Gen[A](sample: State[RNG, A]) {
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
     Gen(State(RNG.nonNegativeInt).map(n => start + n % (stopExclusive - start)))
 
-  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
-    Gen(State.sequence(List.fill(n)(g.sample)))
-
-  def flatMap[B](f: A => Gen[B]): Gen[B] =
-    Gen(sample.flatMap(a => f(a).sample))
-
-  def listOfN(size: Gen[Int]): Gen[List[A]] =
-    size.flatMap(n => listOfN(n, this))
-
-  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] =
-  boolean.flatMap(b => if(b) g1 else g2)
-
   def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = {
     val g1SelectedProb: Double = g1._2.abs / g1._2.abs + g2._2.abs
 
@@ -36,6 +41,15 @@ case class Gen[A](sample: State[RNG, A]) {
       if (d < g1SelectedProb) g1._1.sample else g2._1.sample
     ))
   }
+
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] =
+    boolean.flatMap(b => if(b) g1 else g2)
+
+  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
+    Gen(State.sequence(List.fill(n)(g.sample)))
+
+  def listOf[A](g: Gen[A]): SGen[List[A]] =
+    SGen(n => g.listOf(n))
 }
 
 /*
