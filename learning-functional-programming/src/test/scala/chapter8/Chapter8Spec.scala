@@ -4,6 +4,7 @@ package chapter8
 import java.util.concurrent.{Executors, ExecutorService}
 
 import org.scalatest.{Matchers, FunSuite}
+import util.Par
 
 class Chapter8Spec extends FunSuite with Matchers {
 

@@ -1,5 +1,7 @@
 package chapter8
 
+import util.{State, RNG}
+
 case class Gen[A](sample: State[RNG, A]) {
   def map[B](f: A => B): Gen[B] =
     Gen(sample.map(a => f(a)))

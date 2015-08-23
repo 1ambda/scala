@@ -1,11 +1,8 @@
-package chapter8
+package util
 
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, ExecutorService, Future, TimeUnit}
 
-import State._
+import util.State._
 
 
 class Util { }
@@ -246,7 +243,7 @@ object Candy {
   } yield (s.coins, s.candies)
 }
 
-import Stream._
+import util.Stream._
 
 trait Stream[+A] {
 

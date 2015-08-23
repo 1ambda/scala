@@ -3,7 +3,8 @@ package chapter8
 import java.util.concurrent.Executors
 
 import Prop._
-import chapter8.Par.Par
+import util.{RNG, Par}
+import Par.Par
 
 case class Prop(run: (MaxSize, TestCaseCount, RNG) => Result) {
   def check: Either[(String, Int), Int] = ???
@@ -57,15 +58,15 @@ object Prop {
   type MaxSize = Int
 
   def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
-    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+    (n,rng) => randomStream(as)(rng).zip(util.Stream.from(0)).take(n).map {
       case (a, i) => try {
         if (f(a)) Passed else Falsified(a.toString, i)
       } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
     }.find(_.isFalsified).getOrElse(Passed)
   }
 
-  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
-    Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+  def randomStream[A](g: Gen[A])(rng: RNG): util.Stream[A] =
+    util.Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
 
   def buildMsg[A](s: A, e: Exception): String =
     s"test case: $s\n" +
@@ -80,8 +81,8 @@ object Prop {
 
       val casesPerSize = (n + (max - 1)) / max
 
-      val props: Stream[Prop] =
-        Stream
+      val props: util.Stream[Prop] =
+        util.Stream
           .from(0)
           .take((n min max) + 1)
           .map(index => forAll(g(index))(f)) /* call apply */
