@@ -1,5 +1,7 @@
 package chapter9
 
+import java.util.regex.Pattern
+
 import chapter8._
 import Prop._
 
@@ -12,6 +14,10 @@ trait Parser[+A] { self =>
   def slice[A] = Parser.slice(self)
   def many[A] = Parser.many(self)
   def **[B](other: Parser[B]): Parser[(A, B)] = Parser.product(self, other)
+  def <*(other: Parser[Any]): Parser[A] = Parser.skipR(self, other)
+  def *>[B](other: Parser[B]): Parser[B] = Parser.skipL(self, other)
+  def sep(separator: Parser[Any]) = Parser.sep(self, separator)
+  def sep1(separator: Parser[Any]) = Parser.sep1(self, separator)
 }
 
 object Parser {
@@ -41,7 +47,7 @@ object Parser {
   def many1[A](p: Parser[A]): Parser[List[A]] =
     map2(p, p.many)(_ :: _)
 
-  // many: or, map2, successed
+  // many: or, map2, succeed
   def many[A](p: Parser[A]): Parser[List[A]] =
     map2(p, p.many)(_ :: _) | succeed(List())
 
@@ -67,6 +73,38 @@ object Parser {
 
   def map2[A, B, C](p1: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] =
     p1.flatMap(a => p2.map(b => f(a, b)))
+
+  def skipL[B](p1: Parser[Any], p2: => Parser[B]): Parser[B] =
+    map2(p1.slice, p2)((_, b) => b)
+
+  def skipR[A](p1: => Parser[A], p2: Parser[Any]): Parser[A] =
+    map2(p1, p2.slice)((a, _) => a)
+
+  def surround[A](start: Parser[Any], end: Parser[Any])(p: Parser[A]): Parser[A] =
+    start *> p <* end
+
+  def sep[A](p: Parser[A], separator: Parser[Any]): Parser[List[A]] =
+    sep1(p, separator) | succeed(List())
+
+  def sep1[A](p: Parser[A], separator: Parser[Any]): Parser[List[A]] =
+    map2(p, many(separator *> p))(_ :: _)
+
+  def eof: Parser[String] = regex("\\z".r)
+
+  def root[A](p: Parser[A]): Parser[A] = p <* eof
+
+  def closed(closer: String): Parser[String] = (".*?" + Pattern.quote(closer)).r
+  def enclosed(pattern: String) = string(pattern) *> closed(pattern) map (_.dropRight(1))
+  def quoted: Parser[String] = enclosed("\"")
+  def escapedQuote: Parser[String] = enclosed("\\\"")
+
+  def letter: Parser[Char] = regex("[a-zA-Z]".r) map(_.charAt(0))
+  def whitespace: Parser[String] = "\\s*".r
+  def digits: Parser[String] = "\\d+".r
+  def boolean: Parser[Boolean] = regex("[(true)(false)]".r) map (_.toBoolean)
+  def string: Parser[String] = letter.many map (cs => cs.mkString)
+  def double: Parser[Double] = regex("[-+]?([0-9]*\\.[0-9]+|[0-9]+)".r) map (_.toDouble)
+
 }
 
 object ParserLaws {
