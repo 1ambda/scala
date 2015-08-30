@@ -106,19 +106,30 @@ object CompositionSideEffects extends App with ThreadUtils {
   Thread.sleep(5000)
 }
 
-case class Node(elem: Int, next: Ref[Node])
 
-object NodeOperations extends App with ThreadUtils {
+case class Node(elem: Int, next: Ref[Node]) {
+  def append(n: Node): Unit = atomic { implicit txn =>
+    val oldNext = next()
+    next() = n
+    n.next() = oldNext
+  }
+
+  def nextNode: Node = next.single()
+
+  def appendIfEnd(n: Node) = next.single.transform {
+    oldNext => if (null == oldNext) n else oldNext
+  }
+}
+
+trait NodeOperations extends App with ThreadUtils {
   def nodeToString(n: Node): String = atomic { implicit txn =>
     val b = new StringBuilder
     var curr = n
-
     while (curr != null) {
-      b ++= s"${curr.elem}"
+      b ++= s"${curr.elem}, "
       curr = curr.next()
     }
-
-    b.toString()
+    b.toString
   }
 
 
@@ -135,4 +146,45 @@ object NodeOperations extends App with ThreadUtils {
 
     b.toString()
   }
+}
+
+object SingleOpsExamples extends App with ThreadUtils {
+  val nodes = Node(1, Ref(Node(4, Ref(Node(5, Ref[Node](null))))))
+
+  val f = Future { nodes.append(Node(2, Ref[Node](null)))}
+  val g = Future { nodes.append(Node(3, Ref[Node](null)))}
+
+  for (_ <- f; _ <- g) log(s"Next node is: ${nodes.nextNode}")
+
+  Thread.sleep(1000)
+}
+
+
+class TSortedList extends NodeOperations {
+  val head = Ref[Node](null)
+
+  override def toString = atomic { implicit txn =>
+    val headNode = head()
+    nodeToString(headNode)
+  }
+
+  def insert(x: Int): this.type = atomic { implicit txn =>
+    @tailrec def _insert(n: Node): Unit = {
+      if (n.next() == null || n.next().elem > x) n.append(new Node(x, Ref[Node](null)))
+      else _insert(n.next())
+    }
+
+    if (head() == null || head().elem > x) head() = new Node(x, Ref(head()))
+    else _insert(head())
+    this
+  }
+}
+
+object SortedListExample extends App with ThreadUtils {
+
+  val sortedList = new TSortedList
+
+  sortedList.insert(1)
+
+  Thread.sleep(1000)
 }

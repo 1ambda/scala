@@ -148,4 +148,43 @@ If the transaction gets rolled back in the `nodeToStringWrong` example, the cont
 > When mutating an object inside a transaction, make sure that the object is created inside the transaction and the reference to it does not 
 escape the scope of the transaction.
 
+## Single-Operation Transaction
+
+```scala
+case class Node(elem: Int, next: Ref[Node]) {
+  def append(n: Node): Unit = atomic { implicit txn =>
+    val oldNext = next()
+    next() = n
+    n.next() = oldNext
+  }
+
+  def nextNode: Node = next.single()
+
+  def appendIfEnd(n: Node) = next.single.transform {
+    oldNext => if (null == oldNext) n else oldNext
+  }
+}
+```
+
+## Nesting Transactions
+
+```scala
+class TSortedList extends NodeOperations {
+  val head = Ref[Node](null)
+
+  override def toString: String = atomic { implicit txn =>
+    val h = head()
+    nodeToString(h)
+  }
+}
+```
+
+The nested transaction (used by `nodeToString`) becomes a part of the existing transaction instead of starting new transaction. 
+
+- If the nested transaction fails, it is not rolled back to the start of its `atomic` lock in the `nodToString` method. Instead, 
+it rolls back to the start of the `atomic` block in the `toString` method. 
+
+- The nested transaction does not commit when it reaches the end of the `atomic` block in the `nodeToString` method. The changes induced by the nested transaction 
+become visible, when the initial transaction commits. (the top-level transaction)
+
 
