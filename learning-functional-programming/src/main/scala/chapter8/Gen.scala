@@ -25,6 +25,9 @@ case class Gen[A](sample: State[RNG, A]) {
     size.flatMap(n => this.listOf(n))
 
   def listOf1: SGen[List[A]] = Gen.listOf1(this)
+
+  def **[B](g: Gen[B]): Gen[(A,B)] =
+    (this map2 g)((_,_))
 }
 
 object Gen {
@@ -35,6 +38,11 @@ object Gen {
     Gen(State(rng => rng.nextInt match {
       case (n, rng2) => (n % 2 == 0, rng2)
     }))
+
+  val string: SGen[String] = SGen(stringN)
+
+  def stringN(n: Int): Gen[String] =
+    listOfN(n, choose(0,127)).map(_.map(_.toChar).mkString)
 
   def choose2(start: Int, stopExclusive: Int): Gen[Int] =
     Gen(State(rng => RNG.nonNegativeInt(rng) match {

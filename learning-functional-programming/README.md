@@ -160,7 +160,57 @@ def product[A, B](p1: Parser[A], p2: => Parser[B]): Parser[(A, B)]
 def flatMap[A, B](p1 Parser[A])(f: A => Parser[B]): Parser[B]
 ```
 
+<br/>
 
+전형적인 라이브러리 설계 시나리오에서는 함수가 표현에 어떤 영향을 미칠지가 주된 관심사가 된다. 그러나 대수적 방식으로 접근할 때에는 
+그와는 다른 사고방식이 필요하다. 이 경우에는 가능한 구현에 대해 **함수가 어떤 정보를 명시하는지** 를 기준으로 함수를 고민해야 한다. 
+함수의 서명은 구현에 어떤 정보가 주어지는 지를 결정하고, 명시된 법칙들을 구현이 존중하는 한, 그러한 정보를 어떻게 사용하는지는 구현의 자유이다.
 
+<br/>
 
+```scala
+val spaces = " ".many
+val p1 = scope("magic spell") {
+  "abra" ** spaces ** "cadabra""
+}
+
+val p2 = scope("gibberish") {
+  "abba" ** spaces ** "babba""
+}
+
+val p = p1 or p2
+```
+
+`run(p)("abra cAdabra")` 에 대해서 `ParseError` 가 발생한다면, `"magic spell"` 파싱 오류를 돌려주는 것이 더 적합하다. 지금의 구현으로는 
+`"abra"` 단어만 파싱에 성공한다면, `"magic spell"` 브랜치(**branch**) 의 파싱이 확정(**commited**) 된 상태가 된다. 
+
+이러면 파싱 오류를 만났다 하더라도 다음 분기 `"gibberish"` 를 조사하지 않는다. 프로그래머가 분기 시점을 지정할수 있도록 하기 위해 `attempt` 를 만들어 보자. 
+`p1 or p2` 가 있을 때 `p1` 을 실행하고, 만일 미확정(**uncommitted**) 상태에서 `p1` 이 실패했다면 같은 입력에 대해 `p2` 를 실행하고, 아닐 경우 실패하도록 만들자.
+
+모든 파서가 **문자를 하나라도 파싱했다면, 해당 파싱을 확정하게** 변경하고 확정 지연을 위핸 `attempt` 를 도입하자.
+
+```scala
+def attempt[A](p: Parser[A]): Parser[A]
+
+// law
+attempt(p flatMap(_ => fail)) or p2 == p2
+```
+
+이제 이 `attempt` 를 이용하면 파싱 확정을 지연할 수 있다.
+
+```scala
+(attempt("abra" ** spaces ** "abra") or "cadabra") or ("abra" ** spaces ** "cadabra!")
+```
+
+이제 둘째 `"abra"` 가 파싱되기 전까지는 `"cadabra"` 도 파싱의 대상으로 고려된다.
+
+- 만약 첫 번째 `"abra"` 를 파싱하다가 실패한다면 `"cadabra"` 를 파싱하고 (uncommitted)
+- 만약 두 번째 `"abra"` 까지 파싱 후 실패한다면 `"cadabra"` 를 파싱하지 않는다. (committed)
+
+```scala
+(("abra" ** spaces ** "abra") or "cadabra") or ("abra" ** spaces ** "cadabra!")
+```
+
+만약 위를 실행했다면 첫 번째 `"abra"` 가 실패했다면 바로 확정상태가 되어 `"cadabra"` 를 파싱하지 않았을 것이다. 
+이제는 프로그래머가 committed 시점을 조절할 수 있다.
 
