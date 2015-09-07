@@ -187,7 +187,7 @@ val p = p1 or p2
 이러면 파싱 오류를 만났다 하더라도 다음 분기 `"gibberish"` 를 조사하지 않는다. 프로그래머가 분기 시점을 지정할수 있도록 하기 위해 `attempt` 를 만들어 보자. 
 `p1 or p2` 가 있을 때 `p1` 을 실행하고, 만일 미확정(**uncommitted**) 상태에서 `p1` 이 실패했다면 같은 입력에 대해 `p2` 를 실행하고, 아닐 경우 실패하도록 만들자.
 
-모든 파서가 **문자를 하나라도 파싱했다면, 해당 파싱을 확정하게** 변경하고 확정 지연을 위핸 `attempt` 를 도입하자.
+모든 파서가 **문자를 하나라도 파싱했다면, 해당 파싱을 확정하게** 변경하고 확정 지연을 위한 `attempt` 를 도입하자.
 
 ```scala
 def attempt[A](p: Parser[A]): Parser[A]
@@ -213,4 +213,65 @@ attempt(p flatMap(_ => fail)) or p2 == p2
 
 만약 위를 실행했다면 첫 번째 `"abra"` 가 실패했다면 바로 확정상태가 되어 `"cadabra"` 를 파싱하지 않았을 것이다. 
 이제는 프로그래머가 committed 시점을 조절할 수 있다.
+
+<br/>
+
+## Chapter 10
+
+**모노이드는 하나의 형식이되, 그 형식에 대해 결합법칙을 만족하며 항등원을 가진 이항연산이 존재하는 형식이다**.
+
+- `op(op(x, y), z) == op(x, op(y, z))`
+- `op(x, zero) = op(zero, x)`
+
+<br/>
+
+### Dual
+
+`Option` 모노이드를 다음처럼 구현할 수 있다.
+
+```scala
+implicit def optionMonoid[A] = new Monoid[Option[A]] {
+  override def op(x: Option[A], y: Option[A]): Option[A] = x orElse y
+  override def zero: Option[A] = None
+}
+```
+
+이 때, `op` 를 `y orElse x` 로 구현해도 모노이드 법칙은 성립한다. 이는 결합법칙 뿐만 아니라 **교환법칙** 또한 성립하기 때문이다. 
+이는 `intAdditionMonoid` 나 `booleanOrMonoid` 의 경우에도 마찬가지다.
+
+```scala
+implicit val intAddition = new Monoid[Int] {
+  override def op(a1: Int, a2: Int): Int = a1 + a2
+  override def zero: Int = 0
+}
+
+implicit val booleanOr = new Monoid[Boolean] {
+  override def op(a1: Boolean, a2: Boolean): Boolean = a1 || a2
+  override def zero: Boolean = false
+}
+```
+
+`op` 에서 교환법칙이 성립하는 한, 모든 모노이드는 **dual** 을 가진다. 
+ 
+```scala
+def dual[A](implicit m: Monoid[A]): Monoid[A] = new Monoid[A] {
+  override def op(x: A, y: A): A = m.op(y, x)
+  override def zero: A = m.zero
+}
+```
+
+
+### Parallelism
+
+<br/>
+
+모노이드는 결합법칙이 성립하기 때문에 데이터를 적절히 분할한다면 병렬성으로 성능상의 이득을 볼 수 있다. 예를 들어 
+거대한 텍스트 파일에서 단어를 셀 경우, 병렬로 조사하려면 여러 조각들로 분할 한 뒤 결과를 결합하는 전략을 사용할 수 있다. 
+이 때 지금 조사하는 조각의 위치(중간인지 끝인지)에 상관없이 중간 결과를 결합할 수 있어야 하므로, 결합법칙을 만족해야 한다. 
+이를 **Monoid** 표현해 볼 수 있다.
+
+```sclaa
+```
+
+- 연산에서 결합법칙이 성립한다면, 혹은 병렬 연산을 도입하는 것이 가능하다면 **Monoid** 가 아닌지 의심해 보자
 

@@ -25,9 +25,6 @@ case class Gen[A](sample: State[RNG, A]) {
     size.flatMap(n => this.listOf(n))
 
   def listOf1: SGen[List[A]] = Gen.listOf1(this)
-
-  def **[B](g: Gen[B]): Gen[(A,B)] =
-    (this map2 g)((_,_))
 }
 
 object Gen {
