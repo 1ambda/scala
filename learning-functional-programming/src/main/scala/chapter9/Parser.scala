@@ -1,7 +1,6 @@
 package chapter9
 
 import java.util.regex.Pattern
-
 import chapter8._
 import Prop._
 
@@ -18,13 +17,14 @@ trait Parser[+A] { self =>
   def *>[B](other: Parser[B]): Parser[B] = Parser.skipL(self, other)
   def sep(separator: Parser[Any]) = Parser.sep(self, separator)
   def sep1(separator: Parser[Any]) = Parser.sep1(self, separator)
+  def run[A](loc: Location): Result[A] = Parser.run(self)(loc)
 }
 
 object Parser {
   def count[A](p: Parser[A]): Parser[Int] = p.many.map(_.size)
   def char(c: Char): Parser[Char] = string(c.toString).map(s => s.charAt(0))
   def string(s: String): Parser[String] = ???
-  def run[A](p: Parser[A])(s: String): Either[ParseError, A] = ???
+  def run[A](p: Parser[A])(loc: Location) = ???
 
   implicit def strToParser(s: String): Parser[String] = ???
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A] = ???
@@ -107,16 +107,17 @@ object Parser {
   def label[A](message: String)(p: Parser[A]): Parser[A] = ???
   def scope[A](message: String)(p: Parser[A]): Parser[A] = ???
 
+
 }
 
 object Laws {
   import Parser._
 
-  def equal[A](p1: Parser[A], p2: Parser[A])(in: Gen[String]): Prop =
-    forAll(in) { s => run(p1)(s) == run(p2)(s) }
-
-  def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop
-    = equal(p.map(x => x), p)(in)
+//  def equal[A](p1: Parser[A], p2: Parser[A])(in: Gen[String]): Prop =
+//    forAll(in) { s => run(p1)(s) == run(p2)(s) }
+//
+//  def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop
+//    = equal(p.map(x => x), p)(in)
 }
 
 

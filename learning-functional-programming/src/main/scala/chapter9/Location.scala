@@ -14,12 +14,12 @@ case class Location(input: String, offset: Int = 0) {
     def errorMessage(e: ParseError): String = ???
 
     import Parser._
-    def labelLaw[A](p: Parser[A], inputs: SGen[String]): Prop =
-        forAll(inputs ** Gen.string) { case (input, message) =>
-            run(label(message)(p))(input) match {
-                case Left(e) => errorMessage(e) == message
-                case _ => true
-            }
-        }
+//    def labelLaw[A](p: Parser[A], inputs: SGen[String]): Prop =
+//        forAll(inputs ** Gen.string) { case (input, message) =>
+//            run(label(message)(p))(input) match {
+//                case Left(e) => errorMessage(e) == message
+//                case _ => true
+//            }
+//        }
 }
 
