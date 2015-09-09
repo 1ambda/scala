@@ -43,7 +43,7 @@ object Monoid {
     override def zero: Option[A] = None
   }
 
-  implicit def endMonoid[A] = new Monoid[A => A] {
+  implicit def endoMonoid[A] = new Monoid[A => A] {
     override def op(f: A => A, g: A => A): A => A = f compose g
     override def zero: (A) => A = a => a
   }
@@ -54,14 +54,39 @@ object Monoid {
   }
 
   def concatenate[A](as: List[A])(implicit m: Monoid[A]): A =
-    as.foldRight(m.zero)(m.op)
+    as.foldLeft(m.zero)(m.op)
 
-  def foldMap[A, B](as: List[A])(f: A => B)(implicit m: Monoid[B]): B =
-    concatenate(as map f)
+  def foldMap[A, B](as: List[A])(f: A => B)(m: Monoid[B]): B =
+    as.foldLeft(m.zero)((b, a) => m.op(b, f(a))) // concatenate(as map f)
 
-  def foldLeft[A, B](as: List[A])(z: B)(f: (A, B) => B): B = ???
-  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = ???
+  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
+    foldMap(as)(f.curried)(endoMonoid[B])(z)
 
+  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B =
+    foldMap(as)(a => (b: B) => f(b, a))(dual(endoMonoid[B]))(z)
 
-
+  def foldMapV[A, B](v: IndexedSeq[A])(m: Monoid[B])(f: A => B): B = v.length match {
+    case 0 => m.zero
+    case 1 => f(v(0))
+    case _ =>
+      val (left, right) = v.splitAt(v.length / 2)
+      m.op(foldMapV(left)(m)(f), foldMapV(right)(m)(f))
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

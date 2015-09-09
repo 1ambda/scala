@@ -260,6 +260,89 @@ def dual[A](implicit m: Monoid[A]): Monoid[A] = new Monoid[A] {
 }
 ```
 
+### foldMap using dual, endoMonoid
+
+`foldMap` 을 `foldLeft` 를 이용해서 만들 수 있지만, 거꾸로 `foldLeft`, `foldRight` 를 `foldMap` 을 이용해서 만들 수 있다.
+
+```scala
+// 항등함수 모노이드
+implicit def endoMonoid[A] = new Monoid[A => A] {
+  override def op(f: A => A, g: A => A): A => A = f compose g
+  override def zero: (A) => A = a => a
+}
+
+def foldMap[A, B](as: List[A])(m: Monoid[B])(f: A => B): B =
+  as.foldLeft(m.zero)((b, a) => m.op(b, f(a)))
+```
+
+이 때 `foldMap` 을 이용하면 `foldRight` 를 다음처럼 구현할 수 있다.
+ 
+```scala
+def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
+  foldMap(as)(endoMonoid[B])(f.curried)(z)
+```
+
+여기서 `f.curried` 의 타입은 `A => (B => B)` 이다.
+ 
+```scala
+scala> val f = (a: Int, b: Int) => a + b
+f: (Int, Int) => Int = <function2>
+
+scala> f.curried
+res0: Int => (Int => Int) = <function1>
+```
+
+결국 `endoMonoid[B]` 를 이용해서 `foldLeft` 의 
+
+- 기본값 `zero` 를 `B => B` 로 지정하고, 
+- 연산함수 `f` 를 `(B => B) compose f(a) where f: A => (B => B)` 로 사용하는것이므로 
+
+`B => B` 에 대해 `foldLeft` 를 실행한다고 볼 수 있다. 이때 생기는 각각의 `B => B` 는 `f compose g` 를 이용해서 조합되므로 
+(`f(g(B))`) `foldRight` 의 올바른 구현이다. `foldMap(as)(endMonoid[B])(f.curried)` 에 `z` 를 먹이면 최종 결과물인 `B` 가 나온다.
+
+```scala
+"foldRight" in {
+  // custom impl
+  foldRight(List(1, 2, 3, 4))("")(_ + _) shouldBe "1234"
+
+  // scala standard foldRight
+  List(1, 2, 3, 4).foldRight("")(_ + _) shouldBe "1234"
+}
+```
+
+<br/>
+
+`foldLeft` 의 경우에는 모노이드의 `op` 순서가 뒤집혀야 하므로 `dual` 을 이용하면 된다.
+
+```scala
+def foldLeft[A, B](as: List[A])(m: Monoid[B])(f: (A, B) => B): B = 
+  foldMap(as)(dual(endoMonoid[B]))(a => b => f(b, a))(z)
+```
+
+```scala
+"foldLeft" in {
+  // custom impl
+  foldLeft(List(1, 2, 3, 4))(0)(_ - _) shouldBe -10
+  foldRight(List(1, 2, 3, 4))(0)(_ - _) shouldBe -2
+
+  // scala standard foldRight
+  List(1, 2, 3, 4).foldLeft(0)((a, b) => a - b) shouldBe -10
+  List(1, 2, 3, 4).foldRight(0)((a, b) => a - b) shouldBe -2
+}
+```
+
+### Balanced Fold
+
+모노이드 연산이 결합적이라는 사실은, `List` 같은 자료구조를 접을 때 어느 방향으로 접을 것인지 선택이 가능하다는 뜻이다. (e.g `foldLeft`, `foldRight`) 
+만약 `fold` 를 수행할 때 하나씩이 아니라, 여러개씩 잘라 접을 수 있다면 병렬처리를 할 수 있다. 두 내부 `Monoid.op` 호출이 독립적이기 때문이다.
+
+```scala
+// fold
+op(op(op(a, b), c), d)
+
+// balanced fold
+op(op(a, b), op(c, d))
+```
 
 ### Parallelism
 
@@ -273,5 +356,7 @@ def dual[A](implicit m: Monoid[A]): Monoid[A] = new Monoid[A] {
 ```sclaa
 ```
 
-- 연산에서 결합법칙이 성립한다면, 혹은 병렬 연산을 도입하는 것이 가능하다면 **Monoid** 가 아닌지 의심해 보자
+> 연산에서 결합법칙이 성립한다면, 혹은 병렬 연산을 도입하는 것이 가능하다면 **Monoid** 가 아닌지 의심해 볼 것
+ 
+ 
 
