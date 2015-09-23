@@ -5,7 +5,10 @@
 
 [Chapter2](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/thread) - Thread, Volatile, JMM  
 [Chapter3](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/forkjoin) - Fork-Join Framework, Lock-Free Programming, Lazy Values, Concurrent Collections  
-[Chapter4](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/future) - Future, Async
+[Chapter4](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/future) - Future, Async  
+[Chapter5](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/parallel) - Parallel Collection  
+[Chapter6](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/reactive) - Rx  
+[Chapter7](https://github.com/1ambda/scala/tree/master/concurrent-programming-in-scala/src/main/scala/stm) - STM  
 
 ### Funtional Programming in Scala
 
