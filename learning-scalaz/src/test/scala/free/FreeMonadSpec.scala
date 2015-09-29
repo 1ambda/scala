@@ -105,35 +105,35 @@ object KeyValueStore {
   // pure interpreters
   type KVStore = Map[String, String]
 
-  def interpreterPure(kvs: Free[KVS, Unit], table: KVStore): KVStore =
+  def interpreterPure(kvs: Free[KVS, Unit], table: KVStore): KVStore = ???
   // F[Free[F, A]] \/ A
   // KVS[Free[KVS, Unit]] \/ Unit
-    kvs.resume.fold({
-      case Get(key, onResult) =>
-        interpreterPure(onResult(table(key)), table)
-
-      case Put(key, value, next) =>
-        interpreterPure(next, table + (key -> value))
-
-      case Delete(key, next) =>
-        interpreterPure(next, table - key)
-
-    }, _ => table /* When `resume` finally returns `Unit`, return the table */)
+//    kvs.resume.fold({
+//      case Get(key, onResult) =>
+//        interpreterPure(onResult(table(key)), table)
+//
+//      case Put(key, value, next) =>
+//        interpreterPure(next, table + (key -> value))
+//
+//      case Delete(key, next) =>
+//        interpreterPure(next, table - key)
+//
+//    }, _ => table /* When `resume` finally returns `Unit`, return the table */)
 
   type KVMStore = collection.mutable.Map[String, String]
 
-  def interpreterImpure(kvs: Free[KVS, Unit], table: KVMStore): Unit =
+  def interpreterImpure(kvs: Free[KVS, Unit], table: KVMStore): Unit = ???
     // def go(f: F[FreeF, A]] => Free[F, A]): A
-    kvs.go {
-      case Get(key, onResult) => onResult(table(key))
-      case Put(key, value, next) =>
-        table += (key -> value)
-        next
-
-      case Delete(key, next) =>
-        table -= key
-        next
-    }
+//    kvs.go {
+//      case Get(key, onResult) => onResult(table(key))
+//      case Put(key, value, next) =>
+//        table += (key -> value)
+//        next
+//
+//      case Delete(key, next) =>
+//        table -= key
+//        next
+//    }
 }
 
 
