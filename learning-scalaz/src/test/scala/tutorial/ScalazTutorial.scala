@@ -185,4 +185,92 @@ class ScalazTutorial extends WordSpec with Matchers {
     (some("Jacky") |@| some("Bone")) apply Album.apply shouldBe Some(Album("Jacky", "Bone"))
   }
 
+  /**
+   * so why not just use Either?
+   *
+   * : When validation is constructed with an error type that has a Semigroup,
+   *   there exists an Applicative Functor for Validation that accumulates errors
+   */
+
+  "Constructing Validations" in {
+    import scalaz.Validation
+    import scalaz.syntax.validation._
+
+    42.success shouldBe Validation.success[Nothing, Int](42)
+    "boom".failure shouldBe Validation.failure[String, Nothing]("boom")
+  }
+
+  "Option to Validation" in {
+    import scalaz.std.option._
+    import scalaz.syntax.std.option._
+    import scalaz.Validation
+    import scalaz.syntax.validation._
+
+    42.some.toSuccess("boom") shouldBe Validation.success[String, Int](42)
+    42.some.toSuccess("boom") shouldBe 42.success
+    none[Int].toSuccess("boom") shouldBe "boom".failure
+
+    42.some.toFailure("boom") shouldBe 42.failure
+    none[Int].toFailure("boom") shouldBe "boom".success
+  }
+
+  "Either to Validation" in {
+    import scalaz.Validation.fromEither
+    import scalaz.syntax.validation._
+
+    fromEither(Right(42)) shouldBe 42.success
+    fromEither(Left("boom")) shouldBe "boom".failure
+  }
+
+  "Throwing to Validation" in {
+    import scalaz.Validation.fromTryCatchThrowable
+    import scalaz.syntax.validation._
+
+    fromTryCatchThrowable[Int, Throwable]("42".toInt) shouldBe 42.success
+    fromTryCatchThrowable[Int, Throwable]("asd".toInt).isFailure shouldBe true
+  }
+
+  "Mapping via Bifunction" in {
+    import scalaz.Validation._
+    import scalaz.syntax.validation._
+    import scalaz.syntax.bifunctor._ /* <-: is alias for leftMap */
+
+    fromTryCatchThrowable[Int, Throwable]("asd."toInt)
+      .leftMap {_.getMessage } shouldBe "For input string: \"asd.\"".failure
+
+    fromTryCatchThrowable[Int, Throwable]("asd."toInt).
+      <-: { _.getMessage } shouldBe "For input string: \"asd.\"".failure
+
+    fromTryCatchThrowable[Int, Throwable]("asd."toInt).
+      bimap(_.getMessage, identity) shouldBe "For input string: \"asd.\"".failure
+  }
+
+//  "Validation is Monad" in {
+//    import java.util.UUID
+//    import scalaz.Validation
+//    import scalaz.Validation._
+//    import scalaz.syntax.std.option._
+//    import scalaz.syntax.id._ /* pipe-forward operator */
+//    import scalaz.syntax.bifunctor._
+//
+//    def justMessage[S](v: Validation[Throwable, S]): Validation[String, S] =
+//      v.leftMap { _.getMessage }
+//
+//    def extractUUIDv1(meta: Map[String, String]): Validation[String, UUID] =
+//      for {
+//        str <- meta.get("id").toSuccess("No 'id' property")
+//        id  <- justMessage(fromTryCatchThrowable(UUID.fromString(str))) /* inside-out style */
+//      } yield id
+//
+//    def parseUUID(s: String): Validation[Throwable, UUID] =
+//      fromTryCatchThrowable(UUID.fromString(s))
+//
+//    def extractUUID(meta: Map[String, String]): Validation[String, UUID] =
+//      for {
+//        str <- meta.get("id").toSuccess("No 'id' property")
+//        id <- str |> parseUUID |> justMessage
+//      } yield id
+//
+//  }
+
 }
