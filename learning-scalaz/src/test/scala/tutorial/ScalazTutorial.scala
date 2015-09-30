@@ -108,17 +108,17 @@ class ScalazTutorial extends WordSpec with Matchers {
   }
 
   /**
-    ref - http://yeghishe.github.io/2015/07/06/scalaz-semigroup-monoid-equal-order-enum-show-and-standard-scala-classes.html
-    ref - https://github.com/scalaz/scalaz/blob/series/7.1.x/core/src/main/scala/scalaz/Semigroup.scala
-
-    > Semigroup brings `append` operation and it should be associative
-
-    trait SemigroupLaw {
-       def associative(f1: F, f2: F, f3: F)(implicit F: Equal[F]): Boolean =
-         F.equal(append(f1, append(f2, f3)), append(append(f1, f2), f3))
-     }
-
-    def semigroupLaw = new SemigroupLaw {}
+   * ref - http://yeghishe.github.io/2015/07/06/scalaz-semigroup-monoid-equal-order-enum-show-and-standard-scala-classes.html
+   * ref - https://github.com/scalaz/scalaz/blob/series/7.1.x/core/src/main/scala/scalaz/Semigroup.scala
+   *
+   *  > Semigroup brings `append` operation and it should be associative
+   *
+   * trait SemigroupLaw {
+   *    def associative(f1: F, f2: F, f3: F)(implicit F: Equal[F]): Boolean =
+   *      F.equal(append(f1, append(f2, f3)), append(append(f1, f2), f3))
+   * }
+   *
+   * def semigroupLaw = new SemigroupLaw {}
    */
 
   "Semigroup" in {
@@ -135,8 +135,54 @@ class ScalazTutorial extends WordSpec with Matchers {
 
   /**
    * Monoid extends Semigroup (so that Monoid has the associative append operation)
+   *
+   * See,
+   * https://github.com/scalaz/scalaz/blob/series/7.2.x/core/src/main/scala/scalaz/std/Option.scala#75
    */
   "Option is Monoid" in {
-    // 38 page
+    import scalaz._
+    import Scalaz._
+
+    some(20) |+| none |+| some(22) shouldBe some(42)
+    // alternative Option monoid
+    some(20).first |+| none[Int].first |+| some(22).first shouldBe some(20)
+    some(20).last |+| none[Int].last |+| some(22).last    shouldBe some(22)
   }
+
+  /**
+   * Functor
+   *  map: F[A] => (A => B) => F[B]
+   *
+   * Monad extends Functor (`flatMap(point)` will be `map`)
+   *  point: A => M[A]
+   *  flatMap: M[A] => (A => M[B]) => M[B]
+   *
+   * Applicative extends Functor (`ap(point(func))` will be `map`)
+   *  point: A => F[A]
+   *  ap: F[A] => F[A => B] => F[B]
+   *
+   *
+   * Why Applicatives?
+   *
+   * - Less restrictive than Monads, and thus more general (powerful)
+   * - Composable (http://tonymorris.github.io/blog/posts/monads-do-not-compose/)
+   * - Support parallel computation
+   */
+
+  "Applicative Usage" in {
+    import scalaz.std.option._
+    import scalaz.syntax.applicative._
+
+    val add5: Option[Int => Int] = Some((_: Int) + 5)
+    some(15) <*> add5 shouldBe some(20) /* <*> is alias for `ap` */
+
+    /* more convenient way: Applicative Builder */
+    (some(15) |@| some(5)) apply { _ + _ } shouldBe some(20)
+    (some(15) |@| none[Int] |@| some(6)) apply { _ + _ + _} shouldBe none[Int]
+
+    case class Album(name: String, artist: String) {}
+
+    (some("Jacky") |@| some("Bone")) apply Album.apply shouldBe Some(Album("Jacky", "Bone"))
+  }
+
 }
