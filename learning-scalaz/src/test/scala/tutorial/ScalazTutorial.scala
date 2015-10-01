@@ -245,32 +245,74 @@ class ScalazTutorial extends WordSpec with Matchers {
       bimap(_.getMessage, identity) shouldBe "For input string: \"asd.\"".failure
   }
 
-//  "Validation is Monad" in {
-//    import java.util.UUID
-//    import scalaz.Validation
-//    import scalaz.Validation._
-//    import scalaz.syntax.std.option._
-//    import scalaz.syntax.id._ /* pipe-forward operator */
-//    import scalaz.syntax.bifunctor._
-//
-//    def justMessage[S](v: Validation[Throwable, S]): Validation[String, S] =
-//      v.leftMap { _.getMessage }
-//
-//    def extractUUIDv1(meta: Map[String, String]): Validation[String, UUID] =
-//      for {
-//        str <- meta.get("id").toSuccess("No 'id' property")
-//        id  <- justMessage(fromTryCatchThrowable(UUID.fromString(str))) /* inside-out style */
-//      } yield id
-//
-//    def parseUUID(s: String): Validation[Throwable, UUID] =
-//      fromTryCatchThrowable(UUID.fromString(s))
-//
-//    def extractUUID(meta: Map[String, String]): Validation[String, UUID] =
-//      for {
-//        str <- meta.get("id").toSuccess("No 'id' property")
-//        id <- str |> parseUUID |> justMessage
-//      } yield id
-//
-//  }
+  "Validation is not Monad, but it has flatMap (importing scalaz.Validation.FlatMap._)" in {
+    import java.util.UUID
+    import scalaz.Validation
+    import Validation.fromTryCatchThrowable
+    import Validation.FlatMap._
+    import scalaz.syntax.std.option._
+    import scalaz.syntax.validation._
+    import scalaz.syntax.id._ /* import |> */
+
+    def justMessage[S](v: Validation[Throwable, S]): Validation[String, S] =
+      v.leftMap { _.getMessage }
+
+    val meta1 = Map("id" -> "62ded0a0-67d6-11e5-b08c-0002a5d5c51b")
+    val meta2 = Map("name" -> "lambda")
+    val message = "No 'id' property"
+
+    def extractUUID1(meta: Map[String, String]): Validation[String, UUID] =
+      for {
+        str <- meta.get("id").toSuccess("No 'id' property")
+        id  <- justMessage(fromTryCatchThrowable[UUID, Throwable](UUID.fromString(str))) /* inside-out style */
+      } yield id
+
+    extractUUID1(meta1).isSuccess shouldBe true
+    extractUUID1(meta2).isFailure shouldBe true
+    extractUUID1(meta2) shouldBe message.failure
+
+    def parseUUID(s: String): Validation[Throwable, UUID] =
+      fromTryCatchThrowable[UUID, Throwable](UUID.fromString(s))
+
+    def extractUUID(meta: Map[String, String]): Validation[String, UUID] =
+      for {
+        str <- meta.get("id").toSuccess("No 'id' property")
+        id <- str |> parseUUID _ |> justMessage _
+      } yield id
+
+    extractUUID(meta1).isSuccess shouldBe true
+    extractUUID(meta2).isFailure shouldBe true
+    extractUUID(meta2) shouldBe message.failure
+  }
+
+  /**
+   * Ref
+   *  - http://stackoverflow.com/questions/12211776/why-isnt-validation-a-monad-scalaz7
+   *  - https://groups.google.com/d/msg/scalaz/IWuHC0nlVws/syRUkXJklWIJ
+   *  - https://gist.github.com/aappddeevv/7973370
+   *
+   * As of scalaz 7, `Validation` is not monad.
+   * The roblem seems to be that `ap` would accumulate errors
+   * whereas (pseudo-)monadic composition only operate on the value part of `Validation`
+   *
+   * The issue is that the applicative functor as implied by the monad
+   * does not equal the actual applicative functor
+   */
+
+  "Validation as Applicative Functor" in {
+    // TODO http://johnkurkowski.com/posts/accumulating-multiple-failures-in-a-ValidationNEL/
+    // TODO https://gist.github.com/oxbowlakes/970717
+    // TODO https://github.com/bartschuller/scalaz-validation-example/blob/master/src/main/scala/PersonParser.scala
+  }
+
+  "Pipe" in {
+    // http://stevegilham.blogspot.kr/2009/01/pipe-operator-in-scala.html
+  }
+
+  "scalaz" in {
+    // TODO 107page
+    // https://github.com/mpilquist/scalaz-talk/blob/master/examples.scala
+    // https://higherkindedtripe.wordpress.com/2012/02/07/f-style-pipe-operator-in-scala/
+  }
 
 }
