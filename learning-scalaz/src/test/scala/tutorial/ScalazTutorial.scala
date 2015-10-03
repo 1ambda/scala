@@ -299,10 +299,13 @@ class ScalazTutorial extends WordSpec with Matchers {
    * does not equal the actual applicative functor
    */
 
+  // ref - https://github.com/bartschuller/scalaz-validation-example/blob/master/src/main/scala/PersonParser.scala
   "Validation as Applicative Functor" in {
-    // TODO http://johnkurkowski.com/posts/accumulating-multiple-failures-in-a-ValidationNEL/
-    // TODO https://gist.github.com/oxbowlakes/970717
-    // TODO https://github.com/bartschuller/scalaz-validation-example/blob/master/src/main/scala/PersonParser.scala
+    import scalaz._, Scalaz._
+
+    val result: ValidationNel[String, String] = ("ok".successNel[String]
+       |@| "fail1".failureNel[String]
+       |@| "fail2".failureNel[String]) {_ + _ + _}
   }
 
   "Pipe" in {
