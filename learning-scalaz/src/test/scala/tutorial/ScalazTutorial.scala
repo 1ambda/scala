@@ -380,14 +380,69 @@ class ScalazTutorial extends WordSpec with Matchers {
     (1, 2).map(a => a + 1) shouldBe (1, 3)
   }
 
+  /**
+   * Given a record type and a field, a `lens` provides the ability to focus
+   * on the specified field, which allows accessing the field value and setting the field value
+   * (immutably)
+   *
+   * immutable getter / setter
+   */
+  "Lenz" in {
+
+    case class Name(salutation: String, first: String, last: String)
+    case class Phone(digits: String)
+    case class Contact(name: Name, phone: Phone)
+
+    val seth = Contact(Name("Mr.", "Seth", "Avett"), Phone("555-5555"))
+    val scott = seth.copy(name = seth.name.copy(first = "Scott"))
+
+    import scalaz._, Scalaz._
+
+    val contactNameLens = Lens.lensu[Contact, Name](
+      (c, n) => c.copy(name = n), _.name
+    )
+
+    val contactPhoneLens = Lens.lensu[Contact, Phone](
+      (c, p) => c.copy(phone = p), _.phone
+    )
+
+    val nameSalutationLens = Lens.lensu[Name, String](
+      (n, s) => n.copy(salutation = s), _.salutation
+    )
+
+    val nameFirstLens = Lens.lensu[Name, String](
+      (n, f) => n.copy(first = f), _.first
+    )
+
+    val nameLastLens = Lens.lensu[Name, String](
+      (n, l) => n.copy(first = l), _.last
+    )
+
+    val phoneDigitsLens = Lens.lensu[Phone, String](
+      (p, d) => p.copy(digits = d), _.digits
+    )
+
+    // Lenses can be composed
+    val contactFirstNameLens = contactNameLens >=> nameFirstLens
+
+
+    contactFirstNameLens.get(seth) shouldBe seth
+    contactFirstNameLens.set(seth, "Scott") shouldBe scott
+  }
+
+  "Monocle" in {
+    // TODO https://github.com/julien-truffaut/Monocle
+  }
+
   "Pipe" in {
     // http://stevegilham.blogspot.kr/2009/01/pipe-operator-in-scala.html
+    // https://higherkindedtripe.wordpress.com/2012/02/07/f-style-pipe-operator-in-scala/
   }
+
 
   "scalaz" in {
     // TODO 107 page
     // https://github.com/mpilquist/scalaz-talk/blob/master/examples.scala
-    // https://higherkindedtripe.wordpress.com/2012/02/07/f-style-pipe-operator-in-scala/
   }
 
 }
