@@ -37,18 +37,6 @@ class KleisliSpec extends WordSpec with Matchers {
 
     val s = "1\t2\t3\n1\t2\t3"
     val h = kleisli(getLines) >==> (getFields)
-    val result = h(s)
-
-    getLines(s) foreach { l =>
-      println(getFields(l))
-    }
-
-
-
-
-
-
+    h(s) shouldBe "123123".toList.map(_.toString)
   }
-
-
 }

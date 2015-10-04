@@ -308,12 +308,84 @@ class ScalazTutorial extends WordSpec with Matchers {
        |@| "fail2".failureNel[String]) {_ + _ + _}
   }
 
+  "ValidationNel" in {
+    import scalaz._, Scalaz._
+    import Validation.FlatMap._
+
+    case class Employee(name: String, level: Int, manager: Boolean)
+    type Meta = Map[String, String]
+
+    def justMessage[S](v: Validation[Throwable, S]): Validation[String, S] =
+      v.<-: { _.getMessage }
+
+    def extractString(meta: Meta, key: String): Validation[String, String] =
+      meta.get(key).toSuccess(s"Missing required property $key")
+
+    def extractName(meta: Meta): Validation[String, String] =
+      extractString(meta, "name") flatMap { name =>
+        if (name.isEmpty) "Must have a non-empty name!".failure
+        else name.success
+      }
+
+    def extractLevel(meta: Meta): Validation[String, Int] =
+      extractString(meta, "level")
+        .flatMap( _.parseInt |> justMessage )
+        .flatMap( level =>
+          if (level < 1) "Level must be at least 1".failure
+          else if (level > 15) "Really?".failure
+          else level.success
+        )
+
+    def extractManager(meta: Meta): Validation[String, Boolean] =
+      extractString(meta, "manager") flatMap { _.parseBoolean |> justMessage }
+
+    def extractEmployee(meta: Meta): ValidationNel[String, Employee] = {
+      extractName(meta).toValidationNel  |@|
+      extractLevel(meta).toValidationNel |@|
+      extractManager(meta).toValidationNel
+    } apply Employee.apply
+
+    val valid1:Meta = Map("name" -> "Turing", "level" -> "15", "manager" -> "false")
+    val invalid1 = Map("name" -> "Turing", "level" -> "0", "manager" -> "false")
+    val invalid2 = Map("name" -> "Turing", "level" -> "17", "manager" -> "false")
+    val invalid3 = Map("name" -> "Turing")
+    val invalid4 = Map("name" -> "", "level" -> "17", "manager" -> "notBool")
+
+    extractEmployee(valid1).isSuccess shouldBe true
+    extractEmployee(invalid1).isFailure shouldBe true
+    extractEmployee(invalid2).isFailure shouldBe true
+    extractEmployee(invalid3).isFailure shouldBe true
+    extractEmployee(invalid4).isFailure shouldBe true
+
+    // due to type inference limitation, we need `type lambda`
+    def extractEmployees(metas: List[Meta]): ValidationNel[String, List[Employee]] = {
+      val vEmps: List[ValidationNel[String, Employee]] = metas map extractEmployee
+      // defines type λ[α] as an alias for ValidationNel[String, α]
+      vEmps.sequence[({type λ[α] = ValidationNel[String, α]})#λ, Employee]
+    }
+  }
+
+    /**
+     * ref
+     * - http://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits
+     * - http://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits
+     */
+  "Type Lambda" in {
+    import scalaz._, Scalaz._
+    type IntTuple[+A]=(Int, A)
+    /* Functor[IntTuple].map((1, 2))(a => a + 1)) doesn't compile */
+    Functor[({type λ[α] = (Int, α)})#λ].map((1, 2))(a => a + 1) shouldBe (1, 3)
+
+    // scalaz provided
+    (1, 2).map(a => a + 1) shouldBe (1, 3)
+  }
+
   "Pipe" in {
     // http://stevegilham.blogspot.kr/2009/01/pipe-operator-in-scala.html
   }
 
   "scalaz" in {
-    // TODO 107page
+    // TODO 107 page
     // https://github.com/mpilquist/scalaz-talk/blob/master/examples.scala
     // https://higherkindedtripe.wordpress.com/2012/02/07/f-style-pipe-operator-in-scala/
   }
