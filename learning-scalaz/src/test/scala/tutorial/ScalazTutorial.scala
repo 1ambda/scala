@@ -430,19 +430,8 @@ class ScalazTutorial extends WordSpec with Matchers {
     contactFirstNameLens.set(seth, "Scott") shouldBe scott
   }
 
-  "Monocle" in {
-    // TODO https://github.com/julien-truffaut/Monocle
-  }
-
   "Pipe" in {
     // http://stevegilham.blogspot.kr/2009/01/pipe-operator-in-scala.html
     // https://higherkindedtripe.wordpress.com/2012/02/07/f-style-pipe-operator-in-scala/
   }
-
-
-  "scalaz" in {
-    // TODO 107 page
-    // https://github.com/mpilquist/scalaz-talk/blob/master/examples.scala
-  }
-
 }
