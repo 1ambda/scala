@@ -3,7 +3,7 @@ package monocle
 import org.scalatest._
 
 /* ref - http://julien-truffaut.github.io/Monocle//tut/lens.html */
-class MonocleTutorial extends WordSpec with Matchers {
+class LensTutorial extends WordSpec with Matchers {
 
   case class Address(streetNumber: Int, streetName: String)
   case class Person(name: String, age: Int, address: Address)
@@ -74,5 +74,4 @@ class MonocleTutorial extends WordSpec with Matchers {
     Point.x.get(p) shouldBe 5
     Point.y.set(0)(p) shouldBe Point(5, 0)
   }
-
 }
