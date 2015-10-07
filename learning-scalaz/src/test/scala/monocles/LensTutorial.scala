@@ -1,9 +1,10 @@
-package monocle
+package monocles
 
 import org.scalatest._
 
 /* ref - http://julien-truffaut.github.io/Monocle//tut/lens.html */
 class LensTutorial extends WordSpec with Matchers {
+  import monocle._
 
   case class Address(streetNumber: Int, streetName: String)
   case class Person(name: String, age: Int, address: Address)
@@ -49,8 +50,9 @@ class LensTutorial extends WordSpec with Matchers {
     p2 shouldBe p1.copy(address = p1.address.copy(streetName = p1.address.streetName + " 2"))
   }
 
+  import monocle.macros._
+
   "Generate Lens using Macro" in {
-    import monocle.macros.GenLens
 
     val _age = GenLens[Person](_.age)
     val _ageLens = Lens[Person, Int](_.age)(a => p => p.copy(age = a))
@@ -66,8 +68,8 @@ class LensTutorial extends WordSpec with Matchers {
     p4 shouldBe p1.copy(address = p1.address.copy(streetName = "Iffley Road"))
   }
 
+
   "Generate Lens using Annotation" in {
-    import monocle.macros.Lenses
     @Lenses case class Point(x: Int, y: Int)
 
     val p = Point(5, 3)

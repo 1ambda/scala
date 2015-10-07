@@ -1,6 +1,7 @@
-package monocle
+package monocles
 
 import org.scalatest._
+import monocle._
 
 /* http://julien-truffaut.github.io/Monocle//tut/prism.html */
 class PrismTutorial extends WordSpec with Matchers {
@@ -67,8 +68,9 @@ class PrismTutorial extends WordSpec with Matchers {
   "Prism with Lens" in {
     /* tuple is `Proudct` so, we can use Lens composed with Prism */
 
-    import monocle.function.Fields._ /* first, seconds, ... */
-    import monocle.std.tuple2._
+    /* first, seconds, ... */
+    import monocle.function.Fields._ /* first, second, ... */
+    import monocle.std.tuple2._      /* access to field instance for Tuple2 */
 
     (_cons[Int] composeLens first).set(5)(l1) shouldBe
       LLCons(5, LLCons(2, LLCons(3, LLNil())))
