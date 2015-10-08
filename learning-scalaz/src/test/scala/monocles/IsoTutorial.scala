@@ -67,16 +67,13 @@ class IsoTutorial extends WordSpec with Matchers {
     val p1 = Person("1ambda", 27)
 
     val personToTuple = Iso{p: Person => (p.name, p.age)}((Person.apply _).tupled)
+    personToTuple.get(p1) shouldBe ("1ambda", 27)
 
+    def personToTuple1 = Iso[Person, (String, Int)](p => (p.name, p.age)) {
+      case (name, age) => Person(name, age)
+    }
 
-//    personToTuple.get(p1) shouldBe ("1ambda", 27)
-
-//    def personToTuple1 = Iso[Person, (String, Int)](p => (p.name, p.age)) {
-//      case (name, age) => Person(name, age)
-//    }
-
-
-//    val p2 = (personToTuple composeLens second).set(30, p1)
-//    p2 shouldBe Person("1ambda", 30)
+    val p2 = (personToTuple composeLens second).set(30)(p1)
+    p2 shouldBe Person("1ambda", 30)
   }
 }
