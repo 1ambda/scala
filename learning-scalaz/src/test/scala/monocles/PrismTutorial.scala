@@ -79,18 +79,3 @@ class PrismTutorial extends WordSpec with Matchers {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

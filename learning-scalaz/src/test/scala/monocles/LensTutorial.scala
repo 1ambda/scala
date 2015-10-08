@@ -68,7 +68,6 @@ class LensTutorial extends WordSpec with Matchers {
     p4 shouldBe p1.copy(address = p1.address.copy(streetName = "Iffley Road"))
   }
 
-
   "Generate Lens using Annotation" in {
     @Lenses case class Point(x: Int, y: Int)
 
