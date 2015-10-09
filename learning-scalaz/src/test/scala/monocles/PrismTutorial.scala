@@ -1,10 +1,12 @@
 package monocles
 
 import org.scalatest._
-import monocle._
+import monocle._, Monocle._, monocle.macros._
 
 /* http://julien-truffaut.github.io/Monocle//tut/prism.html */
 class PrismTutorial extends WordSpec with Matchers {
+
+  import PrismTutorial._
   /**
    * A `Prism` is an Optic used to select part of a `Sum` type (also known as `Coproduct`)
    *
@@ -13,17 +15,12 @@ class PrismTutorial extends WordSpec with Matchers {
    * - `A` a part of the `Sum`
    */
 
-  sealed trait Day
-  case object Monday    extends Day
-  case object Tuesday   extends Day
-  case object Wednesday extends Day
-  case object Thursday  extends Day
-  case object Friday    extends Day
-  case object Saturday  extends Day
-  case object Sunday    extends Day
+  val tuesday = GenPrism[Day, Tuesday.type] composeIso GenIso.unit[Tuesday.type]
 
   "Prism Basics" in {
     /* Since `Tuesday is a singleton, it is isomorphic to `Unit` */
+
+
     val _tuesday = Prism[Day, Unit] {
       case Tuesday => Some(())
       case _       => None
@@ -32,6 +29,10 @@ class PrismTutorial extends WordSpec with Matchers {
     _tuesday.reverseGet(()) shouldBe Tuesday
     _tuesday.getOption(Monday) shouldBe None
     _tuesday.getOption(Tuesday) shouldBe Some(())
+
+    tuesday.reverseGet(()) shouldBe Tuesday
+    tuesday.getOption(Monday) shouldBe None
+    tuesday.getOption(Tuesday) shouldBe Some(())
   }
 
   /* `LinkedList` is recursive data type that either empty or a cons */
@@ -66,7 +67,7 @@ class PrismTutorial extends WordSpec with Matchers {
   }
 
   "Prism with Lens" in {
-    /* tuple is `Proudct` so, we can use Lens composed with Prism */
+    /* tuple is `Product` so, we can use Lens composed with Prism */
 
     /* first, seconds, ... */
     import monocle.function.Fields._ /* first, second, ... */
@@ -79,3 +80,14 @@ class PrismTutorial extends WordSpec with Matchers {
   }
 }
 
+
+object PrismTutorial {
+  sealed trait Day
+  case object Monday    extends Day
+  case object Tuesday   extends Day
+  case object Wednesday extends Day
+  case object Thursday  extends Day
+  case object Friday    extends Day
+  case object Saturday  extends Day
+  case object Sunday    extends Day
+}
