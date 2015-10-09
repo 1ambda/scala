@@ -1,8 +1,10 @@
-import org.scalatest.{Matchers, FunSuite}
+package state
 
-import scala.concurrent.Future
-import scalaz._, Scalaz._
+import org.scalatest.{FunSuite, Matchers}
+
 import scala.io.Source
+import scalaz.Scalaz._
+import scalaz._
 
 /*
 

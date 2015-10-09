@@ -1,7 +1,9 @@
+package state
+
 import org.scalatest.{FunSuite, Matchers}
 
+import scalaz.Scalaz._
 import scalaz._
-import Scalaz._
 
 
 // ref: https://softwarecorner.wordpress.com/2014/12/04/scalaz-statet-monad-transformer/
