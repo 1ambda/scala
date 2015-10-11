@@ -22,11 +22,13 @@ libraryDependencies ++= Seq(
   "org.tpolecat"                %% "doobie-core"               % doobieVersion,
   "org.tpolecat"                %% "doobie-contrib-h2"         % doobieVersion,
   "org.tpolecat"                %% "doobie-contrib-specs2"     % doobieVersion,
-  "com.github.julien-truffaut"  %%  "monocle-core"             % monocleVersion,
-  "com.github.julien-truffaut"  %%  "monocle-generic"          % monocleVersion,
-  "com.github.julien-truffaut"  %%  "monocle-macro"            % monocleVersion,
-  "com.github.julien-truffaut"  %%  "monocle-state"            % monocleVersion,
-  "com.github.julien-truffaut"  %%  "monocle-law"              % monocleVersion % "test"
+  "com.github.nscala-time"      %% "nscala-time"               % "2.2.0",
+  "com.github.julien-truffaut"  %% "monocle-core"              % monocleVersion,
+  "com.github.julien-truffaut"  %% "monocle-generic"           % monocleVersion,
+  "com.github.julien-truffaut"  %% "monocle-macro"             % monocleVersion,
+  "com.github.julien-truffaut"  %% "monocle-state"             % monocleVersion,
+  "com.github.julien-truffaut"  %% "monocle-law"               % monocleVersion % "test"
+
 )
 
 // for @Lenses macro support
