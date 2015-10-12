@@ -21,9 +21,9 @@ object Cache {
 case class Timestamped(count: StarCount, time: DateTime)
 
 trait GithubService {
-  def stale(then: DateTime): Boolean = DateTime.now > then + 5.minutes
+def stale(then: DateTime): Boolean = DateTime.now > then + 5.minutes
 
-  def getStarCountFromWebService(url: URL): StarCount = {
+def getStarCountFromWebService(url: URL): StarCount = {
     delay
     exampleStarCounts.getOrElse(url, 0)
   }
@@ -33,7 +33,7 @@ object GithubService {
   type URL = String
   type StarCount = Int
   def delay = {
-    val millis = 500 + new Random().nextInt(500) /* 500 ~ 1000 */
+    val millis = 100 + new Random().nextInt(200) /* 100 ~ 300 */
     Thread.sleep(millis)
   }
   

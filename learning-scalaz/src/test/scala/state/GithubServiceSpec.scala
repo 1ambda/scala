@@ -97,7 +97,9 @@ class GithubServiceSpec extends TestUtils {
     /**
      * Problem:
      *
-     * given `State[T, ?]` how we can treat it as State[S, ?]
+     * Given `State[T, ?]` how we can treat it as State[S, ?]
+     * We want to compose state functions of "smaller" state types
+     * in to functions of "larger" state types
      */
   }
 
