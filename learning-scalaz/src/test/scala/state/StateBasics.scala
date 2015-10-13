@@ -30,10 +30,7 @@ class StateBasics extends TestUtils {
       c <- State.get[Cache]
       optCount = c.get(url)
       _ <- modify { c: Cache =>
-        optCount match {
-          case Some(count) => c
-          case None        => c.updated(url, 0)
-        }
+        if (optCount.isDefined) c else c.updated(url, 0)
       }
     } yield optCount.getOrElse(0)
 
@@ -45,7 +42,4 @@ class StateBasics extends TestUtils {
 
     (c1, star) shouldBe (c.updated("1ambda/haskell", 0), 0)
   }
-
-  Validation
-
 }
