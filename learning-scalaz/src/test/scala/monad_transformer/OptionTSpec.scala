@@ -39,6 +39,7 @@ class OptionTSpec extends TestUtils with OptionTSpecFixtures {
   "liftM" in {
     // type LangState[A] = State[List[Language], A]
     val l = Language("lisp", 309)
+    // same as MonadTrans[OptionT].liftM(l.point[LangState])
     val os1: OptionT[LangState, Language] = l.point[LangState].liftM[OptionT]
     val os2: OptionT[LangState, Language] = OptionT(l.some.point[LangState])
 
