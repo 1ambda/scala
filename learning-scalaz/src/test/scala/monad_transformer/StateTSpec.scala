@@ -11,11 +11,11 @@ class StateTSpec extends TestUtils {
     getAndIncrement.replicateM(10).run(0) shouldBe (10, (0 until 10).toList)
   }
 
-"replicateM(1000)" in {
+  "replicateM(1000)" in {
 
-  import scalaz.Free._
+    import scalaz.Free._
 
-  val getAndIncrement: State[Int, Int] = State { s => (s + 1, s) }
-  getAndIncrement.lift[Trampoline].replicateM(1000).run(0).run shouldBe (1000, (0 until 1000).toList)
-}
+    val getAndIncrement: State[Int, Int] = State { s => (s + 1, s) }
+    getAndIncrement.lift[Trampoline].replicateM(1000).run(0).run shouldBe (1000, (0 until 1000).toList)
+  }
 }
