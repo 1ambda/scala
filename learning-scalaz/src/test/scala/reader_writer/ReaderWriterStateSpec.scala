@@ -3,7 +3,7 @@ package reader_writer
 import org.scalatest.{Matchers, FunSuite}
 import scalaz._, Scalaz._
 
-class RWSSpec extends FunSuite with Matchers {
+class ReaderWriterStateSpec extends FunSuite with Matchers {
 
   /**
    * ref

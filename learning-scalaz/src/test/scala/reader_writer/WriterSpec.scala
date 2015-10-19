@@ -23,11 +23,21 @@ class WriterSpec extends FunSuite with Matchers {
       } yield (o1 |+| o2) /* mappend for Option */
 
       val (logs, merged) = w.run
-      println(logs)
+//      println(logs)
       merged
     }
 
     val r = merge("200", "SELECT FROM PRIVATE_FOR_100", "SELECT FROM PRIVATE_FOR_100")
     r shouldBe None
+  }
+
+  test("Writer usage2") {
+    import Process._
+
+    val (log, process) = createNewProcess.run
+//    println(log)
+//    println(process)
+    process.threads.length shouldBe 1
+    process.threads.head.name shouldBe "main"
   }
 }
