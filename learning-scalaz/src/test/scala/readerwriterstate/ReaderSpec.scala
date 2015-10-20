@@ -1,7 +1,8 @@
-package reader_writer
+package readerwriterstate
 
 import monocles.HttpRequestSpec.HttpRequest
 import org.scalatest._
+import readerwriterstate.{POST, GET}
 import scalaz._, Scalaz._
 
 class ReaderSpec extends FunSuite with Matchers {
@@ -51,7 +52,7 @@ class ReaderSpec extends FunSuite with Matchers {
     val post2 = POST("https://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
 
     val toHttpsRequest = Reader { url: String => url.replace("http://", "https://") }
-    val sslProxy: Reader[_ >: HttpRequest, HttpRequest] = Reader { req: HttpRequest =>
+    val sslProxy: Reader[_ >: readerwriterstate.HttpRequest, readerwriterstate.HttpRequest] = Reader { req: readerwriterstate.HttpRequest =>
       req match {
         case request if request.url.startsWith("https://") => request
         case request: POST => request.copy(url = toHttpsRequest(request.url))
@@ -76,7 +77,7 @@ class ReaderSpec extends FunSuite with Matchers {
     val queryToBody: Reader[GET, Map[String, String]] = url >==> queries >==> body
     queryToBody.run(get1) shouldBe Map("query" -> "scalaz", "site" -> "github")
 
-    val getToPost: Reader[_ >: HttpRequest, POST] = Reader { req : HttpRequest =>
+    val getToPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = Reader { req : readerwriterstate.HttpRequest =>
       req match {
         case get: GET =>
           val split = get.url.split("\\?")
@@ -91,10 +92,11 @@ class ReaderSpec extends FunSuite with Matchers {
 
     getToPost(get1) shouldBe post1
 
-    val proxiedPost: Reader[_ >: HttpRequest, POST] = sslProxy >==> getToPost
+    val proxiedPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = sslProxy >==> getToPost
 
     proxiedPost.run(get1) shouldBe post2
   }
 
+  // http://www.javacodegeeks.com/2015/08/easy-validation-in-scala-using-scalaz-readers-and-validationnel.html
 
 }

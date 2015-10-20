@@ -1,9 +1,14 @@
-package reader_writer
+package readerwriterstate
 
 import org.scalatest.{Matchers, FunSuite}
 import scalaz._, Scalaz._
 
 class ReaderWriterStateSpec extends FunSuite with Matchers {
+
+  // ref - http://stackoverflow.com/questions/11619433/reader-writer-state-monad-how-to-run-this-scala-code
+
+
+
 
   /**
    * ref
@@ -13,6 +18,7 @@ class ReaderWriterStateSpec extends FunSuite with Matchers {
    * https://gist.github.com/mpilquist/2364137
    * https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/ReaderWriterStateTUsage.scala
    * http://underscore.io/blog/posts/2014/07/27/readerwriterstate.html
+   * http://stackoverflow.com/questions/30152019/scalaz-lens-to-readerwriterstate
    */
 
 

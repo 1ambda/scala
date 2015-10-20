@@ -1,4 +1,4 @@
-package reader_writer
+package readerwriterstate
 
 trait HttpRequest {
   def url: String

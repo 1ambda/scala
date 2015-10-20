@@ -1,4 +1,4 @@
-package reader_writer
+package readerwriterstate
 
 import scalaz._, Scalaz._
 
