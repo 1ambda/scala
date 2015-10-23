@@ -11,19 +11,19 @@ import com.github.nscala_time.time.Imports._
 // ref - http://underscore.io/blog/posts/2014/07/27/readerwriterstate.html
 
 
+case class ResultSet()
 
 case class Connection(id: String,
                       actions: List[PostCommitAction] = Nil) {
 
-  def getLock = {}
-  def releaseLock = {}
   def commit = {}
   def rollback = {}
-  def executeRegisteredActions = actions foreach { _ }
+  def getResultSet(query: String): ResultSet = ResultSet()
+  def executeQuery(query: String): Unit = {}
 }
 
 case class PostCommitAction(id: String, action: Action)
-case class DatabaseConfig(operationTimeout: Long)
+case class DatabaseConfig(operationTimeoutMillis: Long)
 
 class OperationTimeoutException private(ex: RuntimeException) extends RuntimeException(ex) {
   def this(message:String) = this(new RuntimeException(message))
@@ -52,54 +52,65 @@ object Database {
   type Action = () => Unit
   type Task[A] = ReaderWriterState[DatabaseConfig, Vector[String] /* log */, Connection, A]
 
-  def genRandomUUID: String = UUID.randomUUID().toString
+  object Implicit {
+    implicit def defaultConnection: Connection = Connection(genRandomUUID)
+    implicit def defaultConfig = DatabaseConfig(500)
+  }
 
-  def perform[A](f: => A): (A, Long) = {
+  private def genRandomUUID: String = UUID.randomUUID().toString
+
+  private def execute[A](f: => A, conf: DatabaseConfig): A = {
     val start = DateTime.now
 
     val a = f
 
     val end = DateTime.now
 
-    (a, (end to start).millis)
+    val time: Long = (start to end).millis
+
+    if (time > conf.operationTimeoutMillis)
+      throw OperationTimeoutException(s"Operation timeout: $time millis")
+
+    a
   }
 
   def createTask[A](f: Connection => A): Task[A] =
     ReaderWriterState { (conf, conn) =>
-
-      val (a, time) = perform(f(conn))
-
-      if (time > conf.operationTimeout) {
-        conn.rollback
-        throw OperationTimeoutException(s"Operation timeout: $time mills")
-      } else
-        (Vector(s"Task was created with connection[${conn.id}]"), a, conn)
+      val a = execute(f(conn), conf)
+      (Vector(s"Task was created with connection[${conn.id}]"), a, conn)
     }
 
-  def addPostCommitAction(action: PostCommitAction): Task[Unit] =
+  def addPostCommitAction(action: Action): Task[Unit] =
     ReaderWriterState { (conf, conn: Connection) =>
-      (Vector(s"Add PostCommitAction(${action.id})"), Unit, conn.copy(actions = conn.actions :+ action))
+
+      val postCommitAction = PostCommitAction(genRandomUUID, action)
+      (Vector(s"Add PostCommitAction(${postCommitAction.id})"),
+        Unit,
+        conn.copy(actions = conn.actions :+ postCommitAction))
+
     }
 
   def run[A](task: Task[A])
-            (implicit defaultConf: DatabaseConfig, defaultConn: Connection): String \/ A = {
+            (implicit defaultConf: DatabaseConfig, defaultConn: Connection): Option[A] = {
 
-    val e: Throwable \/ (Vector[String], A, Connection) =
-      \/.fromTryCatchThrowable(task.run(defaultConf, defaultConn))
+    \/.fromTryCatchThrowable[(Vector[String], A, Connection), Throwable](
+      task.run(defaultConf, defaultConn)
+    ) match {
+      case -\/(t) =>
+        println(s"Operation failed due to ${t.getMessage}") /* logging */
+        none[A]
 
-    e match {
-      case Left(t: Throwable) =>
-        println(s"Operatino failed due to ${t.getMessage}")
-      case Right()
+      case \/-((log: Vector[String], a: A, conn: Connection)) =>
+        conn.commit /* close connection */
+
+        log.foreach { text => println(s"[LOG] $text")} /* logging */
+
+        /* run post commit actions */
+        conn.actions foreach { _.action() }
+
+        a.some
     }
-
-
   }
-
-
-
-
-
 }
 
 

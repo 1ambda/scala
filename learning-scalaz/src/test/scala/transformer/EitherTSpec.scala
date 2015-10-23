@@ -1,5 +1,6 @@
-package monad_transformer
+package transformer
 
+import transformer.{Model, Transaction, QueryService}
 import org.scalatest.{FunSuite, Matchers}
 import scalaz._, Scalaz._
 

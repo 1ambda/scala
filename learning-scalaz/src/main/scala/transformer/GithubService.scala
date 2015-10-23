@@ -1,4 +1,4 @@
-package monad_transformer
+package transformer
 
 import scalaz._, Scalaz._
 

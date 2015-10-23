@@ -3,9 +3,77 @@ package readerwriterstate
 import org.scalatest.{Matchers, FunSuite}
 import scalaz._, Scalaz._
 
-class ReaderWriterStateSpec extends FunSuite with Matchers {
+import scala.concurrent._
 
-  // ref - http://stackoverflow.com/questions/11619433/reader-writer-state-monad-how-to-run-this-scala-code
+class ReaderWriterStateSpec extends FunSuite with Matchers {
+  import Database._
+
+  case class Person(name: String, address: Address)
+  case class Address(street: String)
+
+  def sleep(millis: Long) = java.lang.Thread.sleep(millis)
+
+  def getPerson(name: String): Task[Person] = createTask { conn =>
+    val rs = conn.getResultSet(s"SELECT * FROM USER WHERE name == '$name'")
+
+    /* do something with result set */
+    sleep(50)
+
+    Person(name, Address("BACON STREET 134"))
+  }
+
+  def updateAddress(person : Person): Task[Unit] = createTask { conn =>
+
+    /* do something using person before updating database */
+    sleep(50)
+
+    val rs = conn.executeQuery(
+      s"UPDATE ADDRESS SET street = '${person.address.street}' where person_name = '${person.name}'")
+  }
+
+  test("Database example1") {
+
+    val getAndUpdatePersonTask: Task[Person] = for {
+      p <- getPerson("1ambda")
+      updatedP = p.copy(address = Address("BACON STREET 234"))
+      _ <- addPostCommitAction(() => println("post commit action1"))
+      _ <- updateAddress(updatedP)
+      _ <- addPostCommitAction(() => println("post commit action2"))
+    } yield updatedP
+
+
+    import Database.Implicit._
+    val person: Option[Person] = Database.run(getAndUpdatePersonTask)
+
+    person match {
+      case Some(person) =>
+        person.name shouldBe "1ambda"
+        person.address.street shouldBe "BACON STREET 234"
+
+      case None => fail()
+    }
+  }
+
+  test("Database example2") {
+
+    val getPersonUsingSlowQuery: Task[Person] = createTask { conn =>
+      sleep(600)
+      Person("3ambda", Address("BACON-100"))
+    }
+
+    val getPeopleTask: Task[List[Person]] = for {
+      p1 <- getPerson("1ambda")
+      p2 <- getPerson("2ambda")
+      p3 <- getPersonUsingSlowQuery
+      _ <- addPostCommitAction(() => println("got 3 people"))
+    } yield p1 :: p2 :: p3 :: Nil
+
+    import Database.Implicit._
+    val people = Database.run(getPeopleTask)
+
+    // log: Operation failed due to java.lang.RuntimeException: Operation timeout: 603 millis
+    people shouldBe None
+  }
 
 
 
