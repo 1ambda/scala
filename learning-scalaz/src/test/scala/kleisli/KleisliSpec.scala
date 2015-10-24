@@ -1,7 +1,21 @@
-import org.scalatest._
-import scalaz._, Scalaz._, Kleisli._, syntax.all._
+package kleisli
 
-class KleisliSpec extends WordSpec with Matchers {
+import org.scalatest.{Matchers, FunSuite}
+
+import scalaz._, Scalaz._, Kleisli._
+
+class KleisliSpec extends FunSuite with Matchers {
+
+  /**
+   * http://www.leonardoborges.com/writings/2014/06/17/functional-composition-with-monads-kleisli-functors/
+   * https://github.com/scalaz/scalaz/blob/c847654dcf75c748eacbaf246511bbd938b8631f/core/src/main/scala/scalaz/Kleisli.scala
+   * http://eed3si9n.com/learning-scalaz/Composing+monadic+functions.html
+   * http://underscore.io/blog/posts/2015/10/14/reification.html
+   */
+
+  test("example 0") {
+
+  }
 
   /**
    *  ref - https://wiki.scala-lang.org/display/SW/Kleisli+Monad
@@ -13,7 +27,7 @@ class KleisliSpec extends WordSpec with Matchers {
    *
    */
 
-  "Kleisli" in {
+  test("example 1") {
     type Line = String
     type Field = String
 
@@ -39,4 +53,5 @@ class KleisliSpec extends WordSpec with Matchers {
     val h = kleisli(getLines) >==> (getFields)
     h(s) shouldBe "123123".toList.map(_.toString)
   }
+
 }
