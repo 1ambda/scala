@@ -13,7 +13,42 @@ class KleisliSpec extends FunSuite with Matchers {
    * http://underscore.io/blog/posts/2015/10/14/reification.html
    */
 
+  /**
+   * Kleisli represents a function `A => M[B]`.
+   *
+   * final case class Kleisli[M[_], A, B](run: A => M[B]) { self =>
+   *
+   *  ...
+   * }
+   */
+
+  // ref - http://www.leonardoborges.com/writings/2014/06/17/functional-composition-with-monads-kleisli-functors/
   test("example 0") {
+
+    type ID = String
+    type Table = String
+
+    val ids = List("1ambda", "2ambda")
+    val tables = List("product", "coupon", "user")
+    val owner: Map[ID, List[Table]] = Map(
+      "1ambda" -> List("product, user"),
+      "2ambda" -> List("user")
+    )
+
+    case class Authentication(id: ID)
+    case class Authorization(id: ID, table: Table)
+
+    def authenticate: ID => Option[Authentication] =
+      (id: ID) => (ids contains id).option(Authentication(id))
+
+    def authorize: Authentication => List[Authorization] =
+      (auth: Authentication) => owner.getOrElse(auth.id, List()).map { table =>
+        Authorization(auth.id, table)
+      }
+
+    val authorizations1 = authenticate andThen Functor[Option].lift(authorize)
+    val authorizations2 = authenticate(_: ID) map authorize
+
 
   }
 
