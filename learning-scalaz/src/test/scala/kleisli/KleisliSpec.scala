@@ -4,6 +4,8 @@ import org.scalatest.{Matchers, FunSuite}
 
 import scalaz._, Scalaz._, Kleisli._
 
+import scala.util._
+
 class KleisliSpec extends FunSuite with Matchers {
 
   /**
@@ -46,10 +48,8 @@ class KleisliSpec extends FunSuite with Matchers {
         Authorization(auth.id, table)
       }
 
-    val authorizations1 = authenticate andThen Functor[Option].lift(authorize)
-    val authorizations2 = authenticate(_: ID) map authorize
-
-
+    val authorizations1 = kleisli(authenticate) flatMapK authorize
+    val authorizations2 = authenticate(_: ID) map authorize getOrElse(Nil)
   }
 
   /**
@@ -89,4 +89,62 @@ class KleisliSpec extends FunSuite with Matchers {
     h(s) shouldBe "123123".toList.map(_.toString)
   }
 
+  /* ref - https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/KleisliUsage.scala */
+  test("example 2") {
+    case class Continent(name: String, countries: List[Country] = List.empty)
+    case class Country(name: String, cities: List[City] = List.empty)
+    case class City(name: String, isCapital: Boolean = false, inhabitants: Int = 20)
+
+    val data: List[Continent] = List(
+      Continent("Europe"),
+      Continent("America",
+        List(
+          Country("Canada",
+            List(
+              City("Ottawa"), City("Vancouver"))),
+          Country("USA",
+            List(
+              City("Washington"), City("New York"))))),
+      Continent("Asia",
+        List(
+          Country("India",
+            List(City("New Dehli"), City("Calcutta"))))))
+
+
+    def continents(name: String): List[Continent] =
+      data.filter(k => k.name.contains(name))
+
+    def countries(continent: Continent): List[Country] = continent.countries
+
+    def cities(country: Country): List[City] = country.cities
+
+    def save(cities: List[City]): Try[Unit] =
+      Try {
+        cities.foreach(c => println("Saving " + c.name))
+      }
+
+    def inhabitants(c: City): Int = c.inhabitants
+
+    // Kleisli[List, String, City]
+    val allCities = kleisli(continents) >==> countries >==> cities
+
+    // Kleisli[List, String, Int]
+    val cityInhabitants = allCities map inhabitants
+
+    allCities("America") map(println)
+    (allCities =<< List("America", "Asia")).map(println)
+
+    // Kleisli[Try, String, Unit]
+    val getAndSaveCities = allCities mapK save
+
+    def index(i: Int): String = data(i).name
+
+    // Kleisli[List, Int, City]
+    val allCitiesWithIndex = allCities local index
+
+    allCitiesWithIndex(1) map(println)
+
+  }
+
 }
+
