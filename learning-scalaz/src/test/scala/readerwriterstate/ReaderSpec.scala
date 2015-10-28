@@ -64,8 +64,8 @@ class ReaderSpec extends FunSuite with Matchers {
     sslProxy.run(get1) shouldBe GET("https://www.google.com/search?query=scalaz&site=github")
     sslProxy.run(post1) shouldBe POST("https://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
 
-    val url: Reader[GET, String] = Reader { req: GET => req.url }
-    val queries: Reader[String, String] = Reader { url: String => url.split("\\?")(1) }
+    val uri: Reader[GET, String] = Reader { req: GET => req.url }
+    val queryString: Reader[String, String] = Reader { url: String => url.split("\\?")(1) }
     val body: Reader[String, Map[String, String]] = Reader { queries: String =>
       val qs = queries.split("&").toList
       qs.foldLeft(Map.empty[String, String]) { (acc: Map[String, String], q) =>
@@ -74,7 +74,7 @@ class ReaderSpec extends FunSuite with Matchers {
       }
     }
 
-    val queryToBody: Reader[GET, Map[String, String]] = url >==> queries >==> body
+    val queryToBody: Reader[GET, Map[String, String]] = uri >==> queryString >==> body
     queryToBody.run(get1) shouldBe Map("query" -> "scalaz", "site" -> "github")
 
     val getToPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = Reader { req : readerwriterstate.HttpRequest =>

@@ -48,8 +48,7 @@ class KleisliSpec extends FunSuite with Matchers {
         Authorization(auth.id, table)
       }
 
-    val authorizations1 = kleisli(authenticate) flatMapK authorize
-    val authorizations2 = authenticate(_: ID) map authorize getOrElse(Nil)
+    val authorizations: ID => List[Authorization] = authenticate(_: ID) map authorize getOrElse(Nil)
   }
 
   /**
