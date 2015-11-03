@@ -2,7 +2,7 @@
 
 ### Scalaz Tutorial
 
-[State](http://1ambda.github.io/easy-scalaz-1-state/)
+[State](http://1ambda.github.io/easy-scalaz-1-state/)  
 [Monad Transformer](http://1ambda.github.io/easy-scalaz-2-monad-transformer/)
 
 ### Concurrent Programming in Scala
