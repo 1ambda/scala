@@ -5,6 +5,7 @@
 [State](http://1ambda.github.io/easy-scalaz-1-state/)  
 [Monad Transformer](http://1ambda.github.io/easy-scalaz-2-monad-transformer/)  
 [About Type Classes](http://1ambda.github.io/about-type-class/)  
+ReaderWriterState with Kleisli
 
 ### Concurrent Programming in Scala
 [Ref - Concurrent Programming in Scala](http://www.amazon.com/Learning-Concurrent-Programming-Aleksandar-Prokopec/dp/1783281413/ref=sr_1_1?s=books&ie=UTF8&qid=1433256276&sr=1-1&keywords=concurrent+programming+in+scala)
