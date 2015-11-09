@@ -6,6 +6,7 @@
 [Monad Transformer](http://1ambda.github.io/easy-scalaz-2-monad-transformer/)  
 [About Type Classes](http://1ambda.github.io/about-type-class/)  
 ReaderWriterState with Kleisli  
+IO  
 Free and Trampoline  
 
 ### Concurrent Programming in Scala
