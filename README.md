@@ -8,7 +8,7 @@
 ReaderWriterState with Kleisli  
 IO  
 Free and Trampoline  
-Task
+Task  
 Scalaz Stream
 
 ### Concurrent Programming in Scala
