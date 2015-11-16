@@ -51,7 +51,7 @@ class ReaderSpec extends FunSuite with Matchers {
     val post1 = POST("http://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
     val post2 = POST("https://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
 
-    val toHttpsRequest = Reader { url: String => url.replace("http://", "https://") }
+    val toHttpsRequest = Reader { url: String => url.replaceAll("http://$", "https://") }
     val sslProxy: Reader[_ >: readerwriterstate.HttpRequest, readerwriterstate.HttpRequest] = Reader { req: readerwriterstate.HttpRequest =>
       req match {
         case request if request.url.startsWith("https://") => request
@@ -61,6 +61,7 @@ class ReaderSpec extends FunSuite with Matchers {
     }
 
     toHttpsRequest.run(get1.url) shouldBe "https://www.google.com/search?query=scalaz&site=github"
+    toHttpsRequest.run(post2.url) shouldBe post2.url
     sslProxy.run(get1) shouldBe GET("https://www.google.com/search?query=scalaz&site=github")
     sslProxy.run(post1) shouldBe POST("https://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
 
@@ -74,10 +75,11 @@ class ReaderSpec extends FunSuite with Matchers {
       }
     }
 
-    val queryToBody: Reader[GET, Map[String, String]] = uri >==> queryString >==> body
-    queryToBody.run(get1) shouldBe Map("query" -> "scalaz", "site" -> "github")
+    val queryStringToBody: Reader[GET, Map[String, String]] = uri >==> queryString >==> body
 
-    val getToPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = Reader { req : readerwriterstate.HttpRequest =>
+    queryStringToBody.run(get1) shouldBe Map("query" -> "scalaz", "site" -> "github")
+
+    val convertGetToPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = Reader { req : readerwriterstate.HttpRequest =>
       req match {
         case get: GET =>
           val split = get.url.split("\\?")
@@ -90,9 +92,9 @@ class ReaderSpec extends FunSuite with Matchers {
       }
     }
 
-    getToPost(get1) shouldBe post1
+    convertGetToPost(get1) shouldBe post1
 
-    val proxiedPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = sslProxy >==> getToPost
+    val proxiedPost: Reader[_ >: readerwriterstate.HttpRequest, POST] = sslProxy >==> convertGetToPost
 
     proxiedPost.run(get1) shouldBe post2
   }
