@@ -11,15 +11,15 @@ import com.github.nscala_time.time.Imports._
 // ref - http://underscore.io/blog/posts/2014/07/27/readerwriterstate.html
 
 
-case class ResultSet()
+case class ResultSet() /* dummy */
 
 case class Connection(id: String,
                       actions: List[PostCommitAction] = Nil) {
 
   def commit = {}
   def rollback = {}
-  def getResultSet(query: String): ResultSet = ResultSet()
-  def executeQuery(query: String): Unit = {}
+  def executeAndReturn(query: String): ResultSet = ResultSet()
+  def execute(query: String): Unit = {}
 }
 
 case class PostCommitAction(id: String, action: Action)
@@ -48,7 +48,6 @@ object OperationTimeoutException {
  */
 
 object Database {
-  type Key = String
   type Action = () => Unit
   type Task[A] = ReaderWriterState[DatabaseConfig, Vector[String] /* log */, Connection, A]
 

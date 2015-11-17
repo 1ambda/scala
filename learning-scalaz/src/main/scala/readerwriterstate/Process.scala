@@ -28,5 +28,5 @@ object Process {
     mainThread <- createThread("main")
     process <- createEmptyProcess
     _ <- Vector(s"Main Thread [${mainThread.tid}] was added to Process [${process.pid}").tell
-  } yield process.copy(threads = mainThread :: process.threads)
+  } yield process.copy(threads = mainThread.copy(state = Running) :: process.threads)
 }

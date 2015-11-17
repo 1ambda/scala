@@ -51,7 +51,7 @@ class ReaderSpec extends FunSuite with Matchers {
     val post1 = POST("http://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
     val post2 = POST("https://www.google.com/search", Map("query" -> "scalaz", "site" -> "github"))
 
-    val toHttpsRequest = Reader { url: String => url.replaceAll("http://$", "https://") }
+    val toHttpsRequest = Reader { url: String => url.replaceAll("http://", "https://") }
     val sslProxy: Reader[_ >: readerwriterstate.HttpRequest, readerwriterstate.HttpRequest] = Reader { req: readerwriterstate.HttpRequest =>
       req match {
         case request if request.url.startsWith("https://") => request

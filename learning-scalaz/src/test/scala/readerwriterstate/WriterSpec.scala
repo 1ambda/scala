@@ -9,10 +9,17 @@ import scalaz._, Scalaz._
 class WriterSpec extends FunSuite with Matchers {
 
   // ref - http://eed3si9n.com/learning-scalaz/Writer.html
-  test("WriterOps") {
-    val w1 = 10.set("example")
-    w1.run shouldBe ("example", 10)
-  }
+test("WriterOps") {
+  val w1: Writer[String, Int] = 10.set("w1 created")
+  val w2: Writer[String, Int] = 20.set("w2 created")
+
+  val result: Writer[String, Int] = for {
+    n1 <- w1
+    n2 <- w2
+  } yield n1 + n2
+
+  result.run shouldBe ("w1 createdw2 created", 30)
+}
 
   test("Writer usage") {
     def executeQuery(id: String, query: String): Writer[List[String], Option[Int]] =
@@ -34,42 +41,42 @@ class WriterSpec extends FunSuite with Matchers {
   }
 
   // https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/WriterUsage.scala
-  test("Writer usage2") {
-    import readerwriterstate.Process._
+test("Writer usage2") {
+  import readerwriterstate.Process._
 
-    val (written, process) = createNewProcess.run
+  val (written, process) = createNewProcess.run
 
-    process.threads.length shouldBe 1
-    process.threads.head.name shouldBe "main"
+  process.threads.length shouldBe 1
+  process.threads.head.name shouldBe "main"
 
-    /* map lets you map over the value side */
-    val ts: Logger[List[Thread]] = createNewProcess.map(p => p.threads)
-    ts.value.length shouldBe 1
+  /* map lets you map over the value side */
+  val ts: Logger[List[Thread]] = createNewProcess.map(p => p.threads)
+  ts.value.length shouldBe 1
 
-    /* with mapWritten you can map over the written side */
-    val edited: Vector[String] = createNewProcess.mapWritten(_.map { log => "[LOG]" + log }).written
-    // println(edited.mkString("\n"))
+  /* with mapWritten you can map over the written side */
+  val edited: Vector[String] = createNewProcess.mapWritten(_.map { log => "[LOG]" + log }).written
+//  println(edited.mkString("\n"))
 
-    /* with mapValue, you can map over both sides */
-    createNewProcess.mapValue { case (log, p) =>
-      (log :+ "Add an IO thread",
-       p.copy(threads = Thread(genRandomID, "IO-1", Waiting) :: p.threads))
-    }
-
-    // `:++>` `:++>>`, `<++:`, `<<++:`
-    createNewProcess :++> Vector("add some log")
-    val emptyWithLog = createEmptyProcess :++>> { process =>
-      Vector(s"${process.pid} is an empty process")
-    }
-
-    // println(emptyWithLog.written)
-
-    // Writer is an applicative
-
-    val emptyProcesses: Logger[List[readerwriterstate.Process]] =
-      (createEmptyProcess |@| createEmptyProcess) { List(_) |+| List(_) }
-
-    val ps = emptyProcesses.value
-    ps.length shouldBe 2
+  /* with mapValue, you can map over both sides */
+  createNewProcess.mapValue { case (log, p) =>
+    (log :+ "Add an IO thread",
+     p.copy(threads = Thread(genRandomID, "IO-1", Waiting) :: p.threads))
   }
+
+  // `:++>` `:++>>`, `<++:`, `<<++:`
+  createNewProcess :++> Vector("add some log")
+  val emptyWithLog = createEmptyProcess :++>> { process =>
+    Vector(s"${process.pid} is an empty process")
+  }
+
+   println(emptyWithLog.written)
+
+  // Writer is an applicative
+
+  val emptyProcesses: Logger[List[readerwriterstate.Process]] =
+    (createEmptyProcess |@| createEmptyProcess) { List(_) |+| List(_) }
+
+  val ps = emptyProcesses.value
+  ps.length shouldBe 2
+}
 }

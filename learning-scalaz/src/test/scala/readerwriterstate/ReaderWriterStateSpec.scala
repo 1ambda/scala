@@ -14,7 +14,7 @@ class ReaderWriterStateSpec extends FunSuite with Matchers {
   def sleep(millis: Long) = java.lang.Thread.sleep(millis)
 
   def getPerson(name: String): Task[Person] = createTask { conn =>
-    val rs = conn.getResultSet(s"SELECT * FROM USER WHERE name == '$name'")
+    val rs = conn.executeAndReturn(s"SELECT * FROM USER WHERE name == '$name'")
 
     /* do something with result set */
     sleep(50)
@@ -27,7 +27,7 @@ class ReaderWriterStateSpec extends FunSuite with Matchers {
     /* do something using person before updating database */
     sleep(50)
 
-    val rs = conn.executeQuery(
+    conn.execute(
       s"UPDATE ADDRESS SET street = '${person.address.street}' where person_name = '${person.name}'")
   }
 
