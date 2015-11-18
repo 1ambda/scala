@@ -1,4 +1,6 @@
-import org.scalatest.{Matchers, FunSuite}
+package readerwriterstate
+
+import org.scalatest.{FunSuite, Matchers}
 
 import scala.annotation.tailrec
 
@@ -23,10 +25,10 @@ import scala.annotation.tailrec
 
  */
 
+import scalaz.Scalaz._
 import scalaz._
-import Scalaz._
 
-class WriterMonadSpec extends FunSuite with Matchers {
+class WriterSpec2 extends FunSuite with Matchers {
   test("WriterV Basics") {
     /* ref: https://github.com/scalaz/scalaz/blob/series/7.1.x/core/src/main/scala/scalaz/syntax/WriterOps.scala
 

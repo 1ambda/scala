@@ -1,4 +1,6 @@
-import org.scalatest.{Matchers, FunSuite}
+package transformer
+
+import org.scalatest.{FunSuite, Matchers}
 
 class NaturalTransformerSpec extends FunSuite with Matchers {
 

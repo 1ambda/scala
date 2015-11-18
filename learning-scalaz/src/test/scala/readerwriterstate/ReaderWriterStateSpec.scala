@@ -56,15 +56,15 @@ class ReaderWriterStateSpec extends FunSuite with Matchers {
 
   test("Database example2") {
 
-    val getPersonUsingSlowQuery: Task[Person] = createTask { conn =>
+    val slowQuery: Task[Person] = createTask { conn =>
       sleep(600)
-      Person("3ambda", Address("BACON-100"))
+      Person("Sherlock", Address("BACON ST 221-B"))
     }
 
     val getPeopleTask: Task[List[Person]] = for {
-      p1 <- getPerson("1ambda")
-      p2 <- getPerson("2ambda")
-      p3 <- getPersonUsingSlowQuery
+      p1 <- getPerson("Mycroft")
+      p2 <- getPerson("Watson")
+      p3 <- slowQuery
       _ <- addPostCommitAction(() => println("got 3 people"))
     } yield p1 :: p2 :: p3 :: Nil
 
@@ -74,22 +74,6 @@ class ReaderWriterStateSpec extends FunSuite with Matchers {
     // log: Operation failed due to java.lang.RuntimeException: Operation timeout: 603 millis
     people shouldBe None
   }
-
-
-
-
-  /**
-   * ref
-   *
-   * RWS
-   * http://stackoverflow.com/questions/11619433/reader-writer-state-monad-how-to-run-this-scala-code
-   * https://gist.github.com/mpilquist/2364137
-   * https://github.com/scalaz/scalaz/blob/series/7.2.x/example/src/main/scala/scalaz/example/ReaderWriterStateTUsage.scala
-   * http://underscore.io/blog/posts/2014/07/27/readerwriterstate.html
-   * http://stackoverflow.com/questions/30152019/scalaz-lens-to-readerwriterstate
-   */
-
-
 
   /**
    * IO ST

@@ -1,4 +1,6 @@
-import org.scalatest.{Matchers, FunSuite}
+package transformer
+
+import org.scalatest.{FunSuite, Matchers}
 
 
 // ref: http://www.slideshare.net/StackMob/monad-transformers-in-the-wild

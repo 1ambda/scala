@@ -86,7 +86,6 @@ object Database {
       (Vector(s"Add PostCommitAction(${postCommitAction.id})"),
         Unit,
         conn.copy(actions = conn.actions :+ postCommitAction))
-
     }
 
   def run[A](task: Task[A])

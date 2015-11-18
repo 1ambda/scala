@@ -1,14 +1,39 @@
-import org.scalatest.{Matchers, FunSuite}
+package readerwriterstate
+
+import org.scalatest.{FunSuite, Matchers}
+
+object Database2 {
+  type Key = String
+
+  def run[T](f: => T): T =
+    try {
+      startTransaction()
+      val result = f
+      commit()
+      result
+    } catch {
+      case t => rollback(); throw t;
+    }
+
+  def startTransaction() = {}
+  def commit() = {}
+  def rollback() = {}
+  def addPostCommit(f: () => Unit): Unit = {}
+  def put[A](a: A): Unit = {}
+  def find[A](key: Key): Option[A] = None
+}
 
 
 // ref: http://underscore.io/blog/posts/2014/07/27/readerwriterstate.html
-class ReaderSpec extends FunSuite with Matchers {
+class ReaderSpec2 extends FunSuite with Matchers {
+
+  import Database2._
 
   test("side-effectful database example") {
-    val result: Option[String] = Database.run {
-      Database.put("stuff")
-      Database.addPostCommit(() => println("post action"))
-      Database.find("foo")
+    val result: Option[String] = Database2.run {
+      put("stuff")
+      addPostCommit(() => println("post action"))
+      find("foo")
     }
   }
 
@@ -46,27 +71,5 @@ object FunctionalDatabase {
   def put[A](key: Key, a: A): Work[Unit] = Reader(Transaction => {})
   def find[A](key: Key): Work[Option[A]] = Reader(Transaction => None)
 }
-
-object Database {
-  type Key = String
-
-  def run[T](f: => T): T =
-    try {
-      startTransaction()
-      val result = f
-      commit()
-      result
-    } catch {
-      case t => rollback(); throw t;
-    }
-
-  def startTransaction() = {}
-  def commit() = {}
-  def rollback() = {}
-  def addPostCommit(f: () => Unit): Unit = {}
-  def put[A](a: A): Unit = {}
-  def find[A](key: Key): Option[A] = None
-}
-
 
 

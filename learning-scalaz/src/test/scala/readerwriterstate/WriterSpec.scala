@@ -69,7 +69,7 @@ test("Writer usage2") {
     Vector(s"${process.pid} is an empty process")
   }
 
-   println(emptyWithLog.written)
+//   println(emptyWithLog.written)
 
   // Writer is an applicative
 

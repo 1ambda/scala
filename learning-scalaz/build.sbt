@@ -2,7 +2,7 @@ name := "learning-scalaz"
 version := "1.0"
 scalaVersion := "2.11.7"
 
-val scalazVersion = "7.2.0-M2"
+val scalazVersion = "7.1.5"
 
 resolvers ++= Seq(
   "tpolecat" at "http://dl.bintray.com/tpolecat/maven",
