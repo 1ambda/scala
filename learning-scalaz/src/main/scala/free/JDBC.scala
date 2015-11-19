@@ -57,6 +57,10 @@ final case object Close extends ResultSetOp[Unit]
 object JDBC {
   import Free._, Coyoneda._
 
+  /**
+   * scalaz 7.2.x doesn't have FreeC so that use just Free
+   * SO: http://stackoverflow.com/questions/33792968/why-free-is-not-monad-instance-in-scalaz-7-1-5
+   */
   type CoyoResultSetOp[A] = Coyoneda[ResultSetOp, A]
   type ResultSetIO[A] = Free[CoyoResultSetOp, A]
 
@@ -94,7 +98,7 @@ object JDBC {
    * using natural transformation `ResultSetOp ~> M`
    */
 
-  def interpret(rs: ResultSet) = new (ResultSetOp ~> IO) {
+  private def interpret(rs: ResultSet) = new (ResultSetOp ~> IO) {
     def apply[A](fa: ResultSetOp[A]): IO[A] = fa match {
       case Next         => IO(rs.next)
       case GetString(i) => IO(rs.getString(i))
