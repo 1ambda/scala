@@ -57,22 +57,13 @@ final case object Close extends ResultSetOp[Unit]
 object JDBC {
   import Free._, Coyoneda._
 
-  type ResultSetIO[A] = FreeC[ResultSetOp, A]
+  type CoyoResultSetOp[A] = Coyoneda[ResultSetOp, A]
+  type ResultSetIO[A] = Free[CoyoResultSetOp, A]
 
   val next                 : ResultSetIO[Boolean] = liftFC(Next)
   def getString(index: Int): ResultSetIO[String]  = liftFC(GetString(index))
   def getInt(index: Int)   : ResultSetIO[Int]     = liftFC(GetInt(index))
   def close                : ResultSetIO[Unit]    = liftFC(Close)
-
-  /* for scalaz syntax support */
-  implicit val resultSetIOMonadInstance = new Monad[ResultSetIO] {
-    override def bind[A, B](fa: ResultSetIO[A])(f: (A) => ResultSetIO[B]): ResultSetIO[B] =
-      fa.flatMap(f)
-
-    /* ref - https://gist.github.com/EECOLOR/c312bdf54039a42a3058 */
-    override def point[A](a: => A): ResultSetIO[A] =
-      Free.point[CoyonedaF[ResultSetOp]#A, A](a)
-  }
 
   def getPerson: ResultSetIO[Person] = for {
     name <- getString(1)

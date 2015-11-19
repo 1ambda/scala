@@ -12,7 +12,7 @@ class JDBCSpec extends FunSuite with Matchers {
 
   def createDummyResultSet: ResultSet = new ResultSet {
     val counter = new AtomicInteger(0)
-    override def next: Boolean =
+    override def next: Boolean = ???
 
     override def close: Unit = ???
 
