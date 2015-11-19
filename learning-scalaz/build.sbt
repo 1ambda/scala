@@ -33,3 +33,5 @@ libraryDependencies ++= Seq(
 
 // for @Lenses macro support
 addCompilerPlugin("org.scalamacros" %% "paradise" % "2.0.1" cross CrossVersion.full)
+
+initialCommands in console := "import scalaz._, Scalaz._"
