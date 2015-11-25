@@ -1,5 +1,7 @@
 package free
 
+import free.withoutScalaz
+
 import scalaz._, Scalaz._
 import scala.io.StdIn._
 
@@ -10,6 +12,12 @@ import scala.io.StdIn._
   * code - https://gist.github.com/runarorama/a8fab38e473fafa0921d
   * slide - https://dl.dropboxusercontent.com/u/4588997/ReasonablyPriced.pdf
   * video - https://www.parleys.com/tutorial/53a7d2c3e4b0543940d9e538/
+  *
+  * gist
+  *
+  * - https://github.com/turtlecoder/reasonably-priced/blob/master/src/main/scala/reasonablypriced/Reasonablypriced.scala
+  * - https://github.com/petomat/reasonably-priced/blob/master/src/main/scala/reasonablypriced/Reasonablypriced.scala
+  * - https://github.com/stew/reasonably-priced/blob/master/src/main/scala/reasonable/App.scala
   */
 
 import Bank._
@@ -44,7 +52,7 @@ object Bank {
 
   type Tester[A] = Map[String, String] => (List[String], A)
 
-  implicit val testerMonad = new Monad[Tester] {
+  implicit val testerMonad = new withoutScalaz.Monad[Tester] {
     override def bind[A, B](fa: Tester[A])(f: (A) => Tester[B]): Tester[B] = m => {
       val (o1, a) = fa(m)
       val (o2, b) = f(a)(m)
