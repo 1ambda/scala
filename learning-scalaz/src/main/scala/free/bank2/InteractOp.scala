@@ -1,6 +1,6 @@
 package free.bank2
 
-import scalaz._, Scalaz._, Free._
+import scalaz.{Free, Inject, Id, ~>}, Free._, Id.Id
 
 sealed trait InteractOp[A]
 final case class Ask(prompt: String)   extends InteractOp[String]
@@ -22,11 +22,17 @@ class Interact[F[_]](implicit I: Inject[InteractOp, F]) {
 }
 
 object Interact {
-  implicit def instance[F[_]](implicit I: Inject[Interact, F]): Interact[F]
-    = new Interact[F]
+  implicit def instance[F[_]](implicit I: Inject[InteractOp, F]): Interact[F] =
+    new Interact
 }
 
-
-
-
+object InteractConsole extends (InteractOp ~> Id) {
+  override def apply[A](fa: InteractOp[A]) = fa match {
+    case Ask(prompt) =>
+      println(prompt)
+      scala.io.StdIn.readLine
+    case Tell(message) =>
+      println(message)
+  }
+}
 
