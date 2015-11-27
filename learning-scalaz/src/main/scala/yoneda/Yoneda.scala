@@ -1,14 +1,30 @@
 package yoneda
 
+
+
 import scalaz.Functor
 
+
 /**
- * ref - http://blog.higher-order.com/blog/2013/11/01/free-and-yoneda/
+ * TODO
+ *
+ * https://github.com/scalaz/scalaz/blob/c847654dcf75c748eacbaf246511bbd938b8631f/core/src/main/scala/scalaz/Yoneda.scala
+ * https://github.com/scalaz/scalaz/blob/c847654dcf75c748eacbaf246511bbd938b8631f/core/src/main/scala/scalaz/Coyoneda.scala
+ *
+ * http://www.slideshare.net/kenbot/category-theory-for-beginners
+ * http://www.slideshare.net/kenbot/your-data-structures-are-made-of-maths?related=1
+ */
+
+/**
+ * ref
+ *
+ * - http://blog.higher-order.com/blog/2013/11/01/free-and-yoneda/
+ * - http://stackoverflow.com/questions/24000465/step-by-step-deep-explain-the-power-of-coyoneda-preferably-in-scala-throu
  */
 
 
 trait Yoneda[F[_], A] {
-  def map[B](f: A => B): F[B]
+  def run[B](f: A => B): F[B]
 }
 
 trait Coyoneda[F[_], A] {
@@ -27,11 +43,11 @@ trait Coyoneda[F[_], A] {
 
 object Yoneda {
   def toYoneda[F[_]: Functor, A](fa: F[A]) = new Yoneda[F, A] {
-    override def map[B](f: (A) => B): F[B] = Functor[F].map(fa)(f)
+    override def run[B](f: (A) => B): F[B] = Functor[F].map(fa)(f)
   }
 
   def fromYoneda[F[_], A](yo: Yoneda[F, A]): F[A] =
-    yo.map(a => a)
+    yo.run(a => a)
 }
 
 /**

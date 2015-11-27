@@ -1,11 +1,12 @@
-package free
+package free.bank
 
+import free.bank1.{Bank, Interact}
 import org.scalatest._
-import scalaz._, Scalaz._
 
 class BankSpec extends FunSuite with Matchers {
 
   import Bank._
+  import Interact._
 
   test("Console") {
     val program = for {

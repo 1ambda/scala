@@ -1,9 +1,7 @@
-package free
+package free.bank1
 
-import free.withoutScalaz
-
-import scalaz._, Scalaz._
-import scala.io.StdIn._
+import scalaz._
+import scalaz.Scalaz._
 
 /** ref
   *
@@ -20,8 +18,6 @@ import scala.io.StdIn._
   * - https://github.com/stew/reasonably-priced/blob/master/src/main/scala/reasonable/App.scala
   */
 
-import Bank._
-
 /**
  * Idea - Return a description of what we want to do
  *
@@ -36,54 +32,13 @@ import Bank._
  */
 
 object Bank {
-  import Free._, Coyoneda._
-
-  trait InteractOp[A]
-  final case class Ask(prompt: String) extends InteractOp[String]
-  final case class Tell(msg: String)   extends InteractOp[Unit]
-
-  type CoyonedaInteract[A] = Coyoneda[InteractOp, A]
-  type Interact[A] = Free[CoyonedaInteract, A]
-
-  def ask(prompt: String) = liftFC(Ask(prompt))
-  def tell(msg: String) = liftFC(Tell(msg))
+  import Free._
+  import Interact._
+  import Tester._
 
   def run[A](program: Interact[A]): A = runFC(program)(Console)
 
-  type Tester[A] = Map[String, String] => (List[String], A)
-
-  implicit val testerMonad = new withoutScalaz.Monad[Tester] {
-    override def bind[A, B](fa: Tester[A])(f: (A) => Tester[B]): Tester[B] = m => {
-      val (o1, a) = fa(m)
-      val (o2, b) = f(a)(m)
-      (o1 ++ o2, b)
-    }
-
-    override def point[A](a: => A): Tester[A] = _ => (List(), a)
-  }
-
   def test[A](program: Interact[A]): Tester[A] = runFC(program)(Test)
-}
-
-object Console extends (InteractOp ~> Id) {
-  override def apply[A](i: InteractOp[A]): Id[A] = i match {
-    case Ask(prompt) =>
-      println(prompt)
-      readLine()
-
-    case Tell(msg) =>
-      println(msg)
-  }
-}
-
-object Test extends (InteractOp ~> Tester) {
-  override def apply[A](i: InteractOp[A]): Tester[A] = i match {
-    case Ask(prompt) =>
-      m => (List(), m(prompt))
-
-    case Tell(msg)   =>
-      _ => (List(msg), ())
-  }
 }
 
 
