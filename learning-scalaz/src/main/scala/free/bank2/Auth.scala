@@ -21,13 +21,13 @@ object Auth {
 
 class Auth[F[_]](implicit I: Inject[AuthOp, F]) {
   def login(userId: UserId, password: Password): FreeC[F, Option[User]] = 
-    App.lift(Login(userId, password))
+    Application.lift(Login(userId, password))
 
   def hasPermission(user: User, permission: Permission): FreeC[F, Boolean] =
-    App.lift(HasPermission(user, permission))
+    Application.lift(HasPermission(user, permission))
 }
 
-object AuthTest extends (AuthOp ~> Id) {
+object AuthInterpreter extends (AuthOp ~> Id) {
   override def apply[A](fa: AuthOp[A]) = fa match {
     case Login(userId, password) =>
       if ("1ambda" == userId && "scalaz" == password)
