@@ -8,9 +8,11 @@ final case class Error(message: String) extends LogOp[Unit]
 final case class Info(message: String)  extends LogOp[Unit]
 
 class Log[F[_]](implicit I: Inject[LogOp, F]) {
-  def warn(message: String)  = Application.lift(Warn(message))
-  def info(message: String)  = Application.lift(Info(message))
-  def error(message: String) = Application.lift(Error(message))
+  import Common._
+
+  def warn(message: String)  = lift(Warn(message))
+  def info(message: String)  = lift(Info(message))
+  def error(message: String) = lift(Error(message))
 }
 
 object Log {

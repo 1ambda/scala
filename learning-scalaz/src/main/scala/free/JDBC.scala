@@ -61,8 +61,10 @@ object JDBC {
    * scalaz 7.2.x doesn't have FreeC so that use just Free
    * SO: http://stackoverflow.com/questions/33792968/why-free-is-not-monad-instance-in-scalaz-7-1-5
    */
-  type CoyoResultSetOp[A] = Coyoneda[ResultSetOp, A]
-  type ResultSetIO[A] = Free[CoyoResultSetOp, A]
+  type ResultSetOpCoyo[A] = Coyoneda[ResultSetOp, A]
+  type ResultSetIO[A] = Free[ResultSetOpCoyo, A]
+
+  type ResultSetIO2[A] = Free[({ type λ[α] = Coyoneda[ResultSetOp, α]})#λ, A]
 
   val next                 : ResultSetIO[Boolean] = liftFC(Next)
   def getString(index: Int): ResultSetIO[String]  = liftFC(GetString(index))

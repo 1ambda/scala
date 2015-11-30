@@ -21,10 +21,10 @@ object Auth {
 
 class Auth[F[_]](implicit I: Inject[AuthOp, F]) {
   def login(userId: UserId, password: Password): FreeC[F, Option[User]] = 
-    Application.lift(Login(userId, password))
+    Common.lift(Login(userId, password))
 
   def hasPermission(user: User, permission: Permission): FreeC[F, Boolean] =
-    Application.lift(HasPermission(user, permission))
+    Common.lift(HasPermission(user, permission))
 }
 
 object AuthInterpreter extends (AuthOp ~> Id) {

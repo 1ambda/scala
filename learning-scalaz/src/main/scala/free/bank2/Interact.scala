@@ -8,10 +8,10 @@ final case class Tell(message: String) extends InteractOp[Unit]
 
 class Interact[F[_]](implicit I: Inject[InteractOp, F]) {
   def ask(prompt: String): FreeC[F, String] =
-    Application.lift(Ask(prompt))
+    Common.lift(Ask(prompt))
 
   def tell(message: String): FreeC[F, Unit] =
-    Application.lift(Tell(message))
+    Common.lift(Tell(message))
 }
 
 object Interact {
