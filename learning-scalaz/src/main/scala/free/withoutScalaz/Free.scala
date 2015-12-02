@@ -9,11 +9,19 @@ sealed trait Free[S[_], A] {
     case a => GoSub(a, f)
   }
 
-  // GoSub(a, k)
-  // GoSub(a, k =>
-  //        GoSub(a, (c: Any) => GoSub(k(c), h))
+  // a: Free[S, Z], g: Z => Free[S, A]
+  // Free[S, B] == Free[S, Z], f: Z => Free[S, B]
+  // Gosub(a, (b: Z) => Gosub(g(b), f)
+  // g(b) = Free[S, A], f: A => Free[S, B]
+  // GoSub(g(b), f) == Free[S, B]
+
   def map[B](f: A => B): Free[S, B] =
     flatMap(a => unit(f(a)))
+
+  // S[Free[S, A]], fmap,  Free[S, Any] flatMap f
+  //
+  scalaz.Monad
+  //
 }
 
 final case class Return[S[_], A](a: A) extends Free[S, A]
