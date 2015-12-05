@@ -1,5 +1,6 @@
 package free
 
+import free.withoutScalaz.{Suspend, Return, TailRecursive}
 import org.scalatest._
 
 class TailRecursiveSpec extends FunSuite with Matchers {

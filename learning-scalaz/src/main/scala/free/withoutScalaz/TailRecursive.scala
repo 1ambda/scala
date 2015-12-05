@@ -1,4 +1,4 @@
-package free
+package free.withoutScalaz
 
 trait TailRecursive[A] {
   def unit(a: A): TailRecursive[A] =
