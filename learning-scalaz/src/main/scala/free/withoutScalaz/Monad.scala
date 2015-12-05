@@ -19,4 +19,3 @@ trait Monad2[F[_]] {
     join(map(fa)(f))
 }
 
-
