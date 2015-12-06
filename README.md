@@ -2,15 +2,15 @@
 
 ### Scalaz Tutorial
 
+[About Type Classes](http://1ambda.github.io/about-type-class/)  
 [State](http://1ambda.github.io/easy-scalaz-1-state/)  
 [Monad Transformer](http://1ambda.github.io/easy-scalaz-2-monad-transformer/)  
-[About Type Classes](http://1ambda.github.io/about-type-class/)  
-[ReaderWriterState with Kleisli]()  
-ValidationNel and Either  
-Free and Trampoline  
-IO  
+[ReaderWriterState with Kleisli](http://1ambda.github.io/easy-scalaz-3-readerwriterstate-with-kleisli/)  
+[Yoneda and Free Monad](http://1ambda.github.io/easy-scalaz-4-yoneda-and-free-monad/)  
+ST, IO  
 Task and Future  
 Scalaz Stream  
+ValidationNel and Either  
 
 
 ### Concurrent Programming in Scala
