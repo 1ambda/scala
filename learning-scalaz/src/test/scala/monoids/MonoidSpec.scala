@@ -1,4 +1,4 @@
-package monoid
+package monoids
 
 import org.scalatest.{Matchers, FlatSpec}
 

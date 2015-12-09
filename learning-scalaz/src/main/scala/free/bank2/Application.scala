@@ -24,11 +24,12 @@ object Application {
         userId <- ask("Insert User ID: ")
         password <- ask("Password: ")
         user <- login(userId, password)
-        _ <- warn("")
+        _ <- info(s"user $userId logged in")
         hasPermission <- user.cata(
           none = point(false),
           some = hasPermission(_, "scalaz repository")
         )
+        _ <- warn(s"$userId has no permission for scalaz repository")
         _ <- if (hasPermission) tell("Valid User") else tell("Invalid User")
       } yield hasPermission
     }
@@ -38,14 +39,11 @@ object Application {
 }
 
 object Common {
-  import shapeless._, poly._
   import scalaz.Coproduct, scalaz.~>
 
-  import Application._
-
-  def or[F[_], G[_], H[_]](f: F ~> H, g: G ~> H): ({type cp[α]=scalaz.Coproduct[F,G,α]})#cp ~> H =
-    new scalaz.NaturalTransformation[({type cp[α]=scalaz.Coproduct[F,G,α]})#cp,H] {
-      def apply[A](fa: scalaz.Coproduct[F,G,A]): H[A] = fa.run match {
+  def or[F[_], G[_], H[_]](f: F ~> H, g: G ~> H): ({type cp[α] = Coproduct[F,G,α]})#cp ~> H =
+    new NaturalTransformation[({type cp[α] = Coproduct[F,G,α]})#cp,H] {
+      def apply[A](fa: Coproduct[F,G,A]): H[A] = fa.run match {
         case -\/(ff) ⇒ f(ff)
         case \/-(gg) ⇒ g(gg)
       }
@@ -53,7 +51,4 @@ object Common {
 
   def lift[F[_], G[_], A](fa: F[A])(implicit I: Inject[F, G]): FreeC[G, A] =
     Free.liftFC(I.inj(fa))
-
 }
-
-

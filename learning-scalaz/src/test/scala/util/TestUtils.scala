@@ -7,3 +7,5 @@ trait TestUtils
   with Matchers
   with BeforeAndAfterEach
   with BeforeAndAfterAll
+
+trait TestSuite extends FunSuite with Matchers with BeforeAndAfterEach with BeforeAndAfterAll

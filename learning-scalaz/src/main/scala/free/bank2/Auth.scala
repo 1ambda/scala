@@ -20,7 +20,7 @@ object Auth {
 }
 
 class Auth[F[_]](implicit I: Inject[AuthOp, F]) {
-  def login(userId: UserId, password: Password): FreeC[F, Option[User]] = 
+  def login(userId: UserId, password: Password): FreeC[F, Option[User]] =
     Common.lift(Login(userId, password))
 
   def hasPermission(user: User, permission: Permission): FreeC[F, Boolean] =
