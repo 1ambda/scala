@@ -20,23 +20,55 @@ class MonoidSpec extends TestSuite {
     m1 |+| m2 shouldBe Map("1" -> 1, "2" -> 2, "3" -> 3)
   }
 
-  case class User(name: String, country: String)
+  case class User(name: String, city: String)
   type Filter[A] = A => Boolean
+  val users = List(User("Kelly", ".LONDON"), User("John", ".NY"), User("Cark", ".KAW"))
 
   test("Filters are monoid") {
-    val london: Filter[User] = (_: User).country endsWith(".LONDON")
-    val ny: Filter[User]     = (_: User).country endsWith(".NY")
+    import Tags._
+    import syntax.tag._
 
-    val users = List(User("Kelly", ".LONDON"), User("John", ".NY"), User("Cark", ".KAW"))
+    val london: Filter[User] = (_: User).city endsWith(".LONDON")
+    val ny: Filter[User]     = (_: User).city endsWith(".NY")
 
     implicit def monoidFilter[A] = new Monoid[Filter[A]] {
       override def zero: Filter[A] =
-        a => false
+        a => (Monoid[Boolean @@ Disjunction].zero).unwrap // a => false
       override def append(f1: Filter[A], f2: => Filter[A]): Filter[A] =
-        a => f1(a) || f2(a)
+        a => (Disjunction(f1(a)) |+| Disjunction(f2(a))).unwrap // a => f1(a) || f2(a)
     }
 
     (users filter (london |+| ny) size) shouldBe 2
+  }
+
+  test("Filter with Disjunction Monoid") {
+    import Tags._
+    import syntax.tag._
+
+    implicit val filterMonoid = Monoid[String => Boolean @@ Disjunction]
+
+
+    val london = (u: User) => Disjunction(u.city endsWith(".LONDON"))
+    val ny     = (u: User) => Disjunction(u.city endsWith("NY"))
+
+    (users filter { u => (london |+| ny)(u).unwrap }).size shouldBe 2
+    (users filter { u => (london |+| ny)(u).unwrap }).size shouldBe 2
+  }
+
+  test("Filter can be implemented using for-comprehension") {
+
+    val london = Reader((a: String) => a.endsWith(".LONDON"))
+    val ny = Reader((a: String) => a.endsWith(".NY"))
+    
+    val filters = List(london, ny)
+
+    val result = for {
+      u <- users
+      f <- filters /* inefficient */
+      if f(u.city)
+    } yield u
+
+    result.size shouldBe 2
   }
 
   test("Monoid Tag") {
