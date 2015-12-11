@@ -3,14 +3,13 @@ version := "1.0"
 scalaVersion := "2.11.7"
 
 val scalazVersion = "7.1.5"
+val doobieVersion = "0.2.2"
+val monocleVersion = "1.2.0-M1" // or "1.3.0-SNAPSHOT"
 
 resolvers ++= Seq(
   "tpolecat" at "http://dl.bintray.com/tpolecat/maven",
   "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 )
-
-val doobieVersion = "0.2.2"
-val monocleVersion = "1.2.0-M1" // or "1.3.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "org.scalaz"                  %% "scalaz-core"               % scalazVersion,
@@ -19,6 +18,8 @@ libraryDependencies ++= Seq(
   "org.scalaz"                  %% "scalaz-typelevel"          % "7.1.3",
   "org.scalaz"                  %% "scalaz-scalacheck-binding" % scalazVersion,
   "org.scalatest"               %% "scalatest"                 % "3.0.0-M5",
+  "org.json4s"                  %% "json4s-jackson"            % "3.3.0",
+  "org.json4s"                  %% "json4s-scalaz"             % "3.3.0",
   "com.chuusai"                 %% "shapeless"                 % "2.2.5",
   "org.tpolecat"                %% "doobie-core"               % doobieVersion,
   "org.tpolecat"                %% "doobie-contrib-h2"         % doobieVersion,

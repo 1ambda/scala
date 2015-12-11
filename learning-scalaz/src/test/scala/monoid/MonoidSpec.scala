@@ -9,6 +9,7 @@ import scalaz._, Scalaz._
  * ref
  * - http://www.slideshare.net/oxbow_lakes/practical-scalaz
  * - https://github.com/scalaz/scalaz/blob/series/7.3.x/example/src/main/scala/scalaz/example/TagUsage.scala
+ * - https://github.com/json4s/json4s/tree/3.4/scalaz
  */
 
 class MonoidSpec extends TestSuite {
@@ -20,33 +21,27 @@ class MonoidSpec extends TestSuite {
     m1 |+| m2 shouldBe Map("1" -> 1, "2" -> 2, "3" -> 3)
   }
 
-  case class User(name: String, city: String)
   type Filter[A] = A => Boolean
+  case class User(name: String, city: String)
   val users = List(User("Kelly", ".LONDON"), User("John", ".NY"), User("Cark", ".KAW"))
 
   test("Filters are monoid") {
-    import Tags._
-    import syntax.tag._
+    import Tags._ ,syntax.tag._
+    import std.anyVal._, std.function._
 
     val london: Filter[User] = (_: User).city endsWith(".LONDON")
     val ny: Filter[User]     = (_: User).city endsWith(".NY")
+    val isKelly = (_: User).name endsWith("Kelly")
 
-    implicit def monoidFilter[A] = new Monoid[Filter[A]] {
-      override def zero: Filter[A] =
-        a => (Monoid[Boolean @@ Disjunction].zero).unwrap // a => false
-      override def append(f1: Filter[A], f2: => Filter[A]): Filter[A] =
-        a => (Disjunction(f1(a)) |+| Disjunction(f2(a))).unwrap // a => f1(a) || f2(a)
-    }
+    implicit def booleanMonoid[A] = function1Monoid[A, Boolean](booleanInstance.disjunction)
 
-    (users filter (london |+| ny) size) shouldBe 2
+    ((users filter (london |+| isKelly) size)) shouldBe 1
+    ((users filter (london |+| ny) size)) shouldBe 2
   }
 
   test("Filter with Disjunction Monoid") {
     import Tags._
     import syntax.tag._
-
-    implicit val filterMonoid = Monoid[String => Boolean @@ Disjunction]
-
 
     val london = (u: User) => Disjunction(u.city endsWith(".LONDON"))
     val ny     = (u: User) => Disjunction(u.city endsWith("NY"))
@@ -59,7 +54,7 @@ class MonoidSpec extends TestSuite {
 
     val london = Reader((a: String) => a.endsWith(".LONDON"))
     val ny = Reader((a: String) => a.endsWith(".NY"))
-    
+
     val filters = List(london, ny)
 
     val result = for {
@@ -76,7 +71,6 @@ class MonoidSpec extends TestSuite {
 
     Multiplication(3) |+| Multiplication(3) shouldBe Multiplication(9)
     Monoid[Int @@ Multiplication].zero shouldBe Multiplication(1)
-
 
     /** Conjuction, && */
     Conjunction(true) |+| Conjunction(true) shouldBe Conjunction(true)
@@ -139,14 +133,54 @@ class MonoidSpec extends TestSuite {
     (false !? 1) shouldBe 1
   }
 
+  test("manipulate JSON with BooleanW") {
+    import org.json4s.scalaz.JsonScalaz._
+    import org.json4s._
+    import org.json4s.jackson.JsonMethods._
+
+    val json = parse(
+      """
+        {
+          "street": "Manhattan 2",
+          "zip": "00223"
+        }
+      """)
+
+    case class Address(street: String, zipCode: String)
+    case class Person(name: String, age: Int, address: Address)
+
+    val a1 = (field[String]("street")(json) |@| field[String]("zip")(json)) apply Address
+    val a2 = (field[String]("streets")(json) |@| field[String]("zip")(json)) apply Address
+
+    a1.isSuccess shouldBe true
+    a2.isFailure shouldBe true
+
+    val expectedAddress = Success(Address("Manhattan 2", "00223"))
+    Address.applyJSON(field[String]("street"), field[String]("zip"))(json) shouldBe expectedAddress
+
+    implicit def addrJSONR: JSONR[Address] = Address.applyJSON(field[String]("street"), field[String]("zip"))
+
+    val p = parse(
+      """
+        { "name":"joe",
+          "age":34,
+          "address": {
+            "street": "Manhattan 2", "zip": "00223"
+          }
+        }
+      """)
+    val expectedPerson = Success(Person("joe", 34, Address("Manhattan 2", "00223")))
+    Person.applyJSON(field[String]("name"), field[Int]("age"), field[Address]("address"))(p) shouldBe expectedPerson
+  }
+
   /**
 
-    final case class Endo[A](run: A => A) {
+  final case class Endo[A](run: A => A) {
       final def apply(a: A): A = run(a)
       final def compose(other: Endo[A]): Endo[A] = Endo.endo(run compose other.run)
       final def andThen(other: Endo[A]): Endo[A] = other compose this
     }
-   */
+    */
   test("BooleanW + Endo") {
 
   }
