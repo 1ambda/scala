@@ -48,9 +48,13 @@ object Currency2 {
   import shapeless._
 
   sealed trait Currency extends Any
-  final case class GBP[A](amount: A) extends Currency
-  final case class USD[A](amount: A) extends Currency
-  final case class EUR[A](amount: A) extends Currency
+
+  /**
+   * Value Class, See http://docs.scala-lang.org/overviews/core/value-classes.html
+   */
+  final case class GBP[A](amount: A) extends AnyVal with Currency
+  final case class USD[A](amount: A) extends AnyVal with Currency
+  final case class EUR[A](amount: A) extends AnyVal with Currency
 
   object Implicits {
     implicit class CurrencyOps[A: Monoid](a: A) {

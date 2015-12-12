@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
   "org.scalaz"                  %% "scalaz-effect"             % scalazVersion,
   "org.scalaz"                  %% "scalaz-typelevel"          % "7.1.3",
   "org.scalaz"                  %% "scalaz-scalacheck-binding" % scalazVersion,
+  "org.spire-math"              %% "spire"                     % "0.11.0",
   "org.scalatest"               %% "scalatest"                 % "3.0.0-M5",
   "org.json4s"                  %% "json4s-jackson"            % "3.3.0",
   "org.json4s"                  %% "json4s-scalaz"             % "3.3.0",

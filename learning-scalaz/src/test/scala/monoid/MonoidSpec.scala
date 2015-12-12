@@ -173,15 +173,35 @@ class MonoidSpec extends TestSuite {
     Person.applyJSON(field[String]("name"), field[Int]("age"), field[Address]("address"))(p) shouldBe expectedPerson
   }
 
-  /**
+    /**
 
-  final case class Endo[A](run: A => A) {
+    final case class Endo[A](run: A => A) {
       final def apply(a: A): A = run(a)
       final def compose(other: Endo[A]): Endo[A] = Endo.endo(run compose other.run)
       final def andThen(other: Endo[A]): Endo[A] = other compose this
     }
+
+    final def ??[A](a: => A)(implicit z: Monoid[A]): A =
+      b.valueOrZero(self)(a)
+    final def valueOrZero[A](cond: Boolean)(value: => A)(implicit z: Monoid[A]): A =
+      if (cond) value else z.zero
+
     */
   test("BooleanW + Endo") {
+    val neg = Endo(-(_: Double))
 
+    (true ?? neg apply 2.3) shouldBe -2.3
+    (false ?? neg apply 2.3) shouldBe 2.3
+
+    // Endo[Double] == A
+    // Monoid[Endo[Double]].zero ==
+
+    val a = neg apply 2.3
+
+    println(Monoid[Endo[Int]].zero(0))
+  }
+
+  test("tag") {
+    Tag
   }
 }
