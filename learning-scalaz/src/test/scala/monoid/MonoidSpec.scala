@@ -23,20 +23,34 @@ class MonoidSpec extends TestSuite {
 
   type Filter[A] = A => Boolean
   case class User(name: String, city: String)
-  val users = List(User("Kelly", ".LONDON"), User("John", ".NY"), User("Cark", ".KAW"))
+  val users = List(
+    User("Kelly", ".LONDON"),
+    User("John", ".NY"),
+    User("Cark", ".SEOUL"),
+    User("Kelly", ".NY"),
+    User("Kelly", ".SEOUL")
+  )
 
   test("Filters are monoid") {
     import Tags._ ,syntax.tag._
     import std.anyVal._, std.function._
 
-    val london: Filter[User] = (_: User).city endsWith(".LONDON")
-    val ny: Filter[User]     = (_: User).city endsWith(".NY")
+    val london: Filter[User] = _.city endsWith(".LONDON")
+    val ny: Filter[User]     = _.city endsWith(".NY")
     val isKelly = (_: User).name endsWith("Kelly")
 
     implicit def booleanMonoid[A] = function1Monoid[A, Boolean](booleanInstance.disjunction)
 
-    ((users filter (london |+| isKelly) size)) shouldBe 1
-    ((users filter (london |+| ny) size)) shouldBe 2
+    implicit class FilterOps[A](fa: Function1[A, Boolean]) {
+      def |*|(other: Function1[A, Boolean]): Function1[A, Boolean] =
+        function1Monoid[A, Boolean](booleanInstance.conjunction).append(fa, other)
+    }
+
+    ((users filter (london |+| isKelly) size)) shouldBe 3
+    ((users filter (london |+| ny) size)) shouldBe 3
+
+    val kellys = users filter ((london |*| isKelly) |+| (ny |*| isKelly))
+    kellys.size shouldBe 2
   }
 
   test("Filter with Disjunction Monoid") {
@@ -46,8 +60,7 @@ class MonoidSpec extends TestSuite {
     val london = (u: User) => Disjunction(u.city endsWith(".LONDON"))
     val ny     = (u: User) => Disjunction(u.city endsWith("NY"))
 
-    (users filter { u => (london |+| ny)(u).unwrap }).size shouldBe 2
-    (users filter { u => (london |+| ny)(u).unwrap }).size shouldBe 2
+    (users filter { u => (london |+| ny)(u).unwrap }).size shouldBe 3
   }
 
   test("Filter can be implemented using for-comprehension") {
@@ -63,7 +76,7 @@ class MonoidSpec extends TestSuite {
       if f(u.city)
     } yield u
 
-    result.size shouldBe 2
+    result.size shouldBe 3
   }
 
   test("Monoid Tag") {
@@ -173,9 +186,9 @@ class MonoidSpec extends TestSuite {
     Person.applyJSON(field[String]("name"), field[Int]("age"), field[Address]("address"))(p) shouldBe expectedPerson
   }
 
-    /**
+  /**
 
-    final case class Endo[A](run: A => A) {
+  final case class Endo[A](run: A => A) {
       final def apply(a: A): A = run(a)
       final def compose(other: Endo[A]): Endo[A] = Endo.endo(run compose other.run)
       final def andThen(other: Endo[A]): Endo[A] = other compose this
