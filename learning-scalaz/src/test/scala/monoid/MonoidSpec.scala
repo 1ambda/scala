@@ -1,6 +1,6 @@
 package monoid
 
-import util.TestSuite
+import util.FunTestSuite
 
 import scalaz._, Scalaz._
 
@@ -12,7 +12,10 @@ import scalaz._, Scalaz._
  * - https://github.com/json4s/json4s/tree/3.4/scalaz
  */
 
-class MonoidSpec extends TestSuite {
+class MonoidSpec extends FunTestSuite {
+
+  import scalaz.syntax.equal._
+
   test("Monoid[Map]") {
 
     val m1: Map[String, Int] = Map("1" -> 1, "2" -> 2)
@@ -49,8 +52,12 @@ class MonoidSpec extends TestSuite {
     ((users filter (london |+| isKelly) size)) shouldBe 3
     ((users filter (london |+| ny) size)) shouldBe 3
 
-    val kellys = users filter ((london |*| isKelly) |+| (ny |*| isKelly))
-    kellys.size shouldBe 2
+    val ks1 = users filter ((london |*| isKelly) |+| (ny |*| isKelly))
+    val ks2 = users filter ((london |+| ny) |*| isKelly)
+
+    ks1 === ks2
+    ks1 shouldBe ks2
+    ks1.size shouldBe 2
   }
 
   test("Filter with Disjunction Monoid") {

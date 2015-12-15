@@ -1,9 +1,9 @@
 package monoid
 
 import org.scalatest._
-import util.TestSuite
+import util.FunTestSuite
 
-class CurrencySpec extends TestSuite {
+class CurrencySpec extends FunTestSuite {
   test("Currency1: GBP, USD, EUR support plus") {
     import scalaz._, Scalaz._
     import Currency1._, Currency1.Implicits._

@@ -1,11 +1,11 @@
 package state
 
-import util.TestUtils
+import util.WordTestSuite
 import scalaz._
 import com.github.nscala_time.time.Imports._
 
 /* ref - https://speakerdeck.com/mpilquist/scalaz-state-monad */
-class GithubServiceSpec extends TestUtils {
+class GithubServiceSpec extends WordTestSuite {
   import GithubService._
   import Scalaz._
 

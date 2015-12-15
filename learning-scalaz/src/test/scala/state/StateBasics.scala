@@ -1,9 +1,9 @@
 package state
 
-import util.TestUtils
+import util.WordTestSuite
 import scalaz._, Scalaz._
 
-class StateBasics extends TestUtils {
+class StateBasics extends WordTestSuite {
 
   type Cache = Map[String, Int]
 

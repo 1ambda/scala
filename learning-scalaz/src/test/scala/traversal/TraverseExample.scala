@@ -1,13 +1,13 @@
 package traversal
 
-import util.TestUtils
+import util.WordTestSuite
 
 import scalaz._, Scalaz._
 import scala.concurrent._
 import scala.util.{Success, Failure}
 
 /* ref - http://stackoverflow.com/questions/26602611/how-to-understand-traverse-traverseu-and-traversem */
-class TraverseExample extends TestUtils {
+class TraverseExample extends WordTestSuite {
   import ExecutionContext.Implicits.global
 
   "sequence" in {

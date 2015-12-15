@@ -1,16 +1,17 @@
 package tag
 
-import util.TestSuite
-
-import scalaz._, Scalaz._, Tag._, Tags._, syntax.tag._
+import util.{WordTestSuite, FunTestSuite}
 
 /**
  * ref - http://eed3si9n.com/learning-scalaz/Tagged+type.html
  */
 
-class TagSpec extends TestSuite {
+class TagSpec extends WordTestSuite {
 
-    test("Creating Tagged type") {
+    "Creating Tagged type" in {
+
+      import scalaz._, Scalaz._, Tag._, Tags._, syntax.tag._
+
       sealed trait USD
       sealed trait EUR
       def USD[A](amount: A): A @@ USD = Tag[A, USD](amount)
@@ -23,17 +24,15 @@ class TagSpec extends TestSuite {
                             (implicit M: Monoid[A @@ Multiplication]): A @@ EUR =
         EUR((Multiplication(usd.unwrap) |+| Multiplication(rate)).unwrap)
 
-      convertUSDtoEUR(USD(1), 2) === EUR(2)
-      convertUSDtoEUR(USD(1), 2) shouldBe EUR(2)
-
-      // tagged types are treated as subtype of the origin type
-      2 shouldBe USD(2)
-      convertUSDtoEUR(USD(1), 2) shouldBe USD(2)
-      convertUSDtoEUR(USD(1), 2) === USD(2)
+      // since ===, shouldBe in scalatest only check runtime values we need =:=
+    convertUSDtoEUR(USD(1), 2) =:= EUR(2)
+    // convertUSDtoEUR(USD(1), 2) =:= EUR(3) // will fail
+    // convertUSDtoEUR(USD(1), 2) =:= USD(3) // compile error
     }
 
-  test("without Scalaz") {
+  "without Scalaz" in {
     type Tagged[T] = { type Tag = T }
     type @@[A, T] = A with Tagged[T]
   }
 }
+

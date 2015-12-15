@@ -1,9 +1,9 @@
 package transformer
 
-import util.TestUtils
+import util.WordTestSuite
 import scalaz._, Scalaz._
 
-class StateTSpec extends TestUtils {
+class StateTSpec extends WordTestSuite {
 
   "replicateM(10)" in {
 

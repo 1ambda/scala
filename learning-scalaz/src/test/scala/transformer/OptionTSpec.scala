@@ -1,11 +1,11 @@
 package transformer
 
 import transformer.Language
-import util.TestUtils
+import util.WordTestSuite
 import scalaz._, Scalaz._
 import GithubService._
 
-class OptionTSpec extends TestUtils with OptionTSpecFixtures {
+class OptionTSpec extends WordTestSuite with OptionTSpecFixtures {
 
   "findLanguage1" in {
     val l1 = findLanguage1(users, "1ambda", "akka", "scala")
