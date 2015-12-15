@@ -8,27 +8,29 @@ import util.{WordTestSuite, FunTestSuite}
 
 class TagSpec extends WordTestSuite {
 
-    "Creating Tagged type" in {
+  "Creating Tagged type" in {
 
-      import scalaz._, Scalaz._, Tag._, Tags._, syntax.tag._
+    import scalaz._, Scalaz._, Tag._, Tags._, syntax.tag._
 
-      sealed trait USD
-      sealed trait EUR
-      def USD[A](amount: A): A @@ USD = Tag[A, USD](amount)
-      def EUR[A](amount: A): A @@ EUR = Tag[A, EUR](amount)
+    sealed trait USD
+    sealed trait EUR
+    def USD[A](amount: A): A @@ USD = Tag[A, USD](amount)
+    def EUR[A](amount: A): A @@ EUR = Tag[A, EUR](amount)
 
-      val oneUSD = USD(1)
-      2 * oneUSD.unwrap shouldBe 2
+    val oneUSD = USD(1)
+    2 * oneUSD.unwrap shouldBe 2
 
-      def convertUSDtoEUR[A](usd: A @@ USD, rate: A)
-                            (implicit M: Monoid[A @@ Multiplication]): A @@ EUR =
-        EUR((Multiplication(usd.unwrap) |+| Multiplication(rate)).unwrap)
+    def convertUSDtoEUR[A](usd: A @@ USD, rate: A)
+                          (implicit M: Monoid[A @@ Multiplication]): A @@ EUR =
+      EUR((Multiplication(usd.unwrap) |+| Multiplication(rate)).unwrap)
 
-      // since ===, shouldBe in scalatest only check runtime values we need =:=
+    // since ===, shouldBe in scalatest only check runtime values we need =:=
+
     convertUSDtoEUR(USD(1), 2) =:= EUR(2)
+    //      convertUSDtoEUR(USD(1), 2) === USD(2)
     // convertUSDtoEUR(USD(1), 2) =:= EUR(3) // will fail
     // convertUSDtoEUR(USD(1), 2) =:= USD(3) // compile error
-    }
+  }
 
   "without Scalaz" in {
     type Tagged[T] = { type Tag = T }

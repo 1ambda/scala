@@ -145,12 +145,12 @@ class MonoidSpec extends FunTestSuite {
 
   test("OptinoOps, BooleanOps: ? and | and !") {
     (1.some | 0) shouldBe 1 /* getOrElse */
-    (true  ? 1 | 2) shouldBe 1
-    (false ? 1 | 2) shouldBe 2
-    (true  ?? 1) shouldBe 1
-    (false ?? 1) shouldBe 0 /* raise into zero */
-    (true  !? 1) shouldBe 0 /* reversed `??` */
-    (false !? 1) shouldBe 1
+(true  ? 1 | 2) shouldBe 1
+(false ? 1 | 2) shouldBe 2
+(true  ?? 1) shouldBe 1
+(false ?? 1) shouldBe 0 /* raise into zero */
+(true  !? 1) shouldBe 0 /* reversed `??` */
+(false !? 1) shouldBe 1
   }
 
   test("manipulate JSON with BooleanW") {
@@ -213,12 +213,18 @@ class MonoidSpec extends FunTestSuite {
     (true ?? neg apply 2.3) shouldBe -2.3
     (false ?? neg apply 2.3) shouldBe 2.3
 
-    // Endo[Double] == A
-    // Monoid[Endo[Double]].zero ==
 
-    val a = neg apply 2.3
+    case class HttpRequest(gzipped: Boolean) {
+      def unzip: HttpRequest = this.copy(gzipped = false)
+    }
+    case class HttpResponse()
+    type Handler = HttpRequest => HttpResponse
 
-    println(Monoid[Endo[Int]].zero(0))
+    def handleRequest_(req: HttpRequest, handler: Handler): HttpResponse =
+      handler(req.gzipped ? req.unzip | req)
+
+    def handlerRequest(req: HttpRequest, handler: Handler): HttpResponse =
+      handler(req.gzipped ?? Endo[HttpRequest](_.unzip) apply req)
   }
 
   test("tag") {

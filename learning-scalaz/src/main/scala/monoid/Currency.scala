@@ -75,4 +75,14 @@ object Currency2 {
       }
     }
   }
+
+}
+
+object CurrencyTest {
+
+  import scalaz._, Scalaz._
+  import Currency2._, Currency2.Implicits._
+
+  import org.scalactic.TypeCheckedTripleEquals._
+  1.GBP === 2.USD
 }
