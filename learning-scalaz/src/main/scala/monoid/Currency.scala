@@ -84,5 +84,5 @@ object CurrencyTest {
   import Currency2._, Currency2.Implicits._
 
   import org.scalactic.TypeCheckedTripleEquals._
-  1.GBP === 2.USD
+//  1.GBP === 2.USD
 }
