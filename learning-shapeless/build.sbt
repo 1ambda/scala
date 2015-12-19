@@ -24,6 +24,8 @@ libraryDependencies ++= Seq(
   "org.json4s"                  %% "json4s-jackson"            % "3.3.0",
   "org.json4s"                  %% "json4s-scalaz"             % "3.3.0",
   "com.chuusai"                 %% "shapeless"                 % "2.2.5",
+  "io.spray"                    %% "spray-json"                % "1.3.2",
+  "com.github.fommil"           %% "spray-json-shapeless"      % "1.1.0",
   "org.tpolecat"                %% "doobie-core"               % doobieVersion,
   "org.tpolecat"                %% "doobie-contrib-h2"         % doobieVersion,
   "org.tpolecat"                %% "doobie-contrib-specs2"     % doobieVersion,
