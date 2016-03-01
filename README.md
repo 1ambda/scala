@@ -6,7 +6,8 @@
 [State](http://1ambda.github.io/easy-scalaz-1-state/)  
 [Monad Transformer](http://1ambda.github.io/easy-scalaz-2-monad-transformer/)  
 [ReaderWriterState with Kleisli](http://1ambda.github.io/easy-scalaz-3-readerwriterstate-with-kleisli/)  
-[Yoneda and Free Monad](http://1ambda.github.io/easy-scalaz-4-yoneda-and-free-monad/)  
+[Yoneda and Free Monad](http://1ambda.github.io/easy-scalaz-4-yoneda-and-free-monad/)   
+http://1ambda.github.io/easy-scalaz-5-playing-with-monoids/  
 ST, IO  
 Task and Future  
 Scalaz Stream  
