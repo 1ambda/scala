@@ -21,6 +21,7 @@ class LabelledGenericSpec extends TestSuite {
     val bookExtGen = LabelledGeneric[ExtendedBook]
 
     val tapl = Book("Benjamin Pierce", "Types and Programming Language", 262162091, 44.11)
+    Witness
 
     val repr = bookGen.to(tapl)
 
@@ -37,5 +38,4 @@ class LabelledGenericSpec extends TestSuite {
     println(Keys[bookGen.Repr])
 
   }
-
 }

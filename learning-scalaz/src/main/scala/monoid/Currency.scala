@@ -44,17 +44,22 @@ object Currency1 {
 }
 
 object Currency2 {
-  import scalaz._
+  import scalaz._, scalaz.Tags._
   import shapeless._
 
-  sealed trait Currency extends Any
+  sealed trait Currency[A] extends Any { self =>
+    def amount: A
+    def to[C[_] <: Currency[_]] (implicit
+                                 G: Generic.Aux[C[A], A :: HNil]): C[A] =
+      G.from(amount :: HNil)
+  }
 
   /**
    * Value Class, See http://docs.scala-lang.org/overviews/core/value-classes.html
    */
-  final case class GBP[A](amount: A) extends AnyVal with Currency
-  final case class USD[A](amount: A) extends AnyVal with Currency
-  final case class EUR[A](amount: A) extends AnyVal with Currency
+  final case class GBP[A](amount: A) extends AnyVal with Currency[A]
+  final case class USD[A](amount: A) extends AnyVal with Currency[A]
+  final case class EUR[A](amount: A) extends AnyVal with Currency[A]
 
   object Implicits {
     implicit class CurrencyOps[A: Monoid](a: A) {
@@ -63,7 +68,7 @@ object Currency2 {
       def USD = Currency2.USD(a)
     }
 
-    implicit def monoidCurrency[A, C[_] <: Currency]
+    implicit def monoidCurrency[A, C[A] <: Currency[A]]
     (implicit M: Monoid[A], G: Generic.Aux[C[A], A :: HNil]) = new Monoid[C[A]] {
       override def zero: C[A] =
         G.from(M.zero:: HNil)
@@ -75,8 +80,40 @@ object Currency2 {
       }
     }
   }
-
 }
+
+object Currency3 {
+  import scalaz._, Scalaz._, scalaz.Tags._
+  import shapeless._
+
+  sealed trait Currency[A] extends Any {
+    def amount: A
+    def to[C[A] <: Currency[A]](implicit G: Generic.Aux[C[A], A :: HNil]): C[A] =
+      G.from(amount :: HNil)
+  }
+
+  final case class EUR[A](amount: A) extends AnyVal with Currency[A]
+  final case class USD[A](amount: A) extends AnyVal with Currency[A]
+
+  implicit class CurrencyOps[A](amount: A) {
+    def EUR = Currency3.EUR(amount)
+    def USD = Currency3.USD(amount)
+  }
+
+  implicit def currencyMonoid[A : Monoid, C[A] <: Currency[A]]
+  (implicit G: Generic.Aux[C[A], A :: HNil]) = new Monoid[C[A]] {
+    override def zero: C[A] =
+      G.from(implicitly[Monoid[A]].zero :: HNil)
+
+    override def append(c1: C[A], c2: => C[A]): C[A] = {
+      val a1: A = G.to(c1).head
+      val a2: A = G.to(c2).head
+
+      G.from(implicitly[Monoid[A]].append(a1, a2) :: HNil)
+    }
+  }
+}
+
 
 object CurrencyTest {
 
@@ -84,5 +121,4 @@ object CurrencyTest {
   import Currency2._, Currency2.Implicits._
 
   import org.scalactic.TypeCheckedTripleEquals._
-//  1.GBP === 2.USD
 }

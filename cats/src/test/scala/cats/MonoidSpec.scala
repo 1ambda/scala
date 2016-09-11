@@ -4,6 +4,9 @@ import util.TestSuite
 
 class MonoidSpec extends TestSuite {
 
+
+  F[A], F[B] => F[(A, B)]
+
   /**
     * Monoid extends Semigroup type class while adding zero (or sometimes called empty) operation.
     * Zero provide the identity functionality to combine operation

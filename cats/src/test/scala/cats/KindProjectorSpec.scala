@@ -2,6 +2,11 @@ package cats
 
 import util.TestSuite
 
+A => F[A]
+F[A], F[B] =>
+
+A, B => F[A)]
+
 class KindProjectorSpec extends TestSuite {
 
   /**

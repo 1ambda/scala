@@ -28,6 +28,8 @@ class MonadSpec extends TestSuite {
   test("Monad.flatten") {
     Option(Option(1)).flatten shouldBe Some(1)
     Option(None).flatten shouldBe None
+
+    Some(1).flatMap
     List(List(1), List(2, 3)).flatten shouldBe List(1, 2, 3)
   }
 

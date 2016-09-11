@@ -182,6 +182,11 @@ class ScalazTutorial extends WordSpec with Matchers {
 
     case class Album(name: String, artist: String) {}
 
+    val maybeName = some("Duck")
+    val maybeArtist = some("Song1")
+
+    val result: Option[Album] = (maybeName |@| maybeArtist) apply Album.apply
+
     (some("Jacky") |@| some("Bone")) apply Album.apply shouldBe Some(Album("Jacky", "Bone"))
   }
 
